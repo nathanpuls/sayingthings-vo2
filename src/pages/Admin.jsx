@@ -3,8 +3,8 @@ import { auth, loginWithGoogle, logout, db, storage } from "../lib/firebase";
 import { onAuthStateChanged } from "firebase/auth";
 import { collection, onSnapshot, getDocs, addDoc, updateDoc, deleteDoc, doc, query, orderBy } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
-import { useLocation } from "react-router-dom";
-import { Trash2, Edit2, Plus, Save, X, LogOut, LogIn, UploadCloud, Settings } from "lucide-react";
+import { useLocation, Link } from "react-router-dom";
+import { Trash2, Edit2, Plus, Save, X, LogOut, LogIn, UploadCloud, Settings, Home } from "lucide-react";
 import { demos as staticDemos } from "../content/demos";
 import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
 
@@ -263,8 +263,17 @@ export default function Admin() {
     return (
         <div className="min-h-screen bg-slate-50 p-8">
             <div className="max-w-4xl mx-auto">
-                <header className="flex justify-between items-center mb-10">
-                    <h1 className="text-3xl font-bold text-slate-900">Manage Demos</h1>
+                <header className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-10">
+                    <div className="flex items-center gap-4">
+                        <Link
+                            to="/"
+                            className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-white rounded-full transition-all border border-slate-200"
+                            title="Go to Home"
+                        >
+                            <Home size={20} />
+                        </Link>
+                        <h1 className="text-3xl font-bold text-slate-900">Manage Demos</h1>
+                    </div>
                     <div className="flex items-center gap-4">
                         <span className="text-sm text-slate-500 hidden sm:inline">Logged in as {user.email}</span>
                         <button
