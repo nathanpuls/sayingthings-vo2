@@ -60,7 +60,6 @@ export default function Home() {
     siteName: "",
     profileImage: "",
     profileCartoon: "",
-    profileCartoon: "",
     themeColor: "#4f46e5",
     sectionOrder: ["demos", "projects", "studio", "clients", "reviews", "about", "contact"],
     font: "Outfit"
@@ -96,7 +95,6 @@ export default function Home() {
           contactPhone: settings.contact_phone || "",
           siteName: settings.site_name || "",
           profileImage: settings.profile_image || "",
-          profileCartoon: settings.profile_cartoon || "",
           profileCartoon: settings.profile_cartoon || "",
           themeColor: settings.theme_color || "#4f46e5",
           sectionOrder: settings.section_order || ["demos", "projects", "studio", "clients", "reviews", "about", "contact"],

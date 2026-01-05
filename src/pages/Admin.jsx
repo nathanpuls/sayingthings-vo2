@@ -4,8 +4,9 @@ import { Link } from "react-router-dom";
 import {
     Trash2, Edit2, Plus, Save, X, LogOut, LogIn, UploadCloud,
     Home, ArrowUp, ArrowDown, Music, Video, Mic, Users,
-    MessageSquare, Contact, Info, Settings, RefreshCcw, Database, Share2, Type
+    MessageSquare, Contact, Info, Settings, RefreshCcw, Database, Share2, Type, GripVertical
 } from "lucide-react";
+import { Reorder } from "framer-motion";
 import { db as firebaseDb } from "../lib/firebase";
 import { collection, getDocs } from "firebase/firestore";
 import { demos as staticDemos } from "../content/demos";
@@ -41,7 +42,6 @@ export default function Admin() {
         contactPhone: "",
         siteName: "",
         profileImage: "",
-        profileCartoon: "",
         profileCartoon: "",
         themeColor: "#4f46e5",
         sectionOrder: ["demos", "projects", "studio", "clients", "reviews", "about", "contact"],
@@ -155,7 +155,6 @@ export default function Admin() {
                 contactPhone: settings.contact_phone || "",
                 siteName: settings.site_name || "",
                 profileImage: settings.profile_image || "",
-                profileCartoon: settings.profile_cartoon || "",
                 profileCartoon: settings.profile_cartoon || "",
                 themeColor: settings.theme_color || "#4f46e5",
                 sectionOrder: settings.section_order || ["demos", "projects", "studio", "clients", "reviews", "about", "contact"],
@@ -315,26 +314,31 @@ export default function Admin() {
         catch (error) { showToast("Error deleting: " + error.message, "error"); }
     };
 
-    const handleMove = async (collName, index, direction) => {
-        const list = collName === "demos" ? demos : collName === "videos" ? videos : collName === "studio" ? studio : collName === "clients" ? clients : reviews;
-        const newList = [...list];
-        const targetIndex = direction === 'up' ? index - 1 : index + 1;
-        if (targetIndex < 0 || targetIndex >= newList.length) return;
+    const handleReorder = async (collName, newItems) => {
+        // 1. Optimistic Update
+        if (collName === "demos") setDemos(newItems);
+        else if (collName === "videos") setVideos(newItems);
+        else if (collName === "studio") setStudio(newItems);
+        else if (collName === "clients") setClients(newItems);
+        else if (collName === "reviews") setReviews(newItems);
 
-        // Swap order values in DB??? 
-        // Simpler: swap locally then update all orders.
-        // Actually for SQL, just swap the 'order' field of the two affected items.
-
-        const itemA = newList[index];
-        const itemB = newList[targetIndex];
-        const tableName = collName === 'studio' ? 'studio_gear' : collName;
-
+        // 2. Persist to DB
         try {
-            // Swap orders
-            await supabase.from(tableName).update({ order: itemB.order }).eq('id', itemA.id);
-            await supabase.from(tableName).update({ order: itemA.order }).eq('id', itemB.id);
-            fetchData();
-        } catch (error) { showToast("Error reordering: " + error.message, "error"); }
+            const tableName = collName === 'studio' ? 'studio_gear' : collName;
+
+            // Prepare payload: use all existing fields but update 'order'
+            const updates = newItems.map((item, index) => ({
+                ...item,
+                order: index
+            }));
+
+            const { error } = await supabase.from(tableName).upsert(updates);
+            if (error) throw error;
+        } catch (error) {
+            console.error("Reorder failed:", error);
+            showToast("Error saving order: " + error.message, "error");
+            fetchData(); // Revert on error
+        }
     };
 
     const updateItem = async (collName, id) => {
@@ -382,7 +386,6 @@ export default function Admin() {
                 contact_phone: siteContent.contactPhone,
                 site_name: siteContent.siteName,
                 profile_image: siteContent.profileImage,
-                profile_cartoon: siteContent.profileCartoon,
                 profile_cartoon: siteContent.profileCartoon,
                 theme_color: siteContent.themeColor,
                 section_order: siteContent.sectionOrder,
@@ -485,7 +488,6 @@ export default function Admin() {
                 contact_phone: "323-395-8384",
                 site_name: "Nathan Puls",
                 profile_image: "/images/profile.jpeg",
-                profile_cartoon: "/images/profile-cartoon-no-bg.png",
                 profile_cartoon: "/images/profile-cartoon-no-bg.png",
                 theme_color: "#4f46e5",
                 section_order: ["demos", "projects", "studio", "clients", "reviews", "about", "contact"],
@@ -689,7 +691,7 @@ export default function Admin() {
                                 <FormInput label="Audio URL" placeholder="https://..." value={newDemo.url} onChange={v => setNewDemo({ ...newDemo, url: v })} />
                                 <button type="submit" disabled={uploading || !newDemo.name || !newDemo.url} className="text-white py-3 px-6 rounded-xl font-bold transition-all disabled:opacity-50 bg-[var(--theme-primary)] hover:opacity-90 shadow-lg shadow-[var(--theme-primary)]/30">Add Demo</button>
                             </form>
-                            <ItemList items={demos} collName="demos" onMove={handleMove} onDelete={deleteItem} editingId={editingId} setEditingId={setEditingId} editForm={editForm} setEditForm={setEditForm} onSave={updateItem} onCancel={() => setEditingId(null)} fields={[{ key: 'name', label: 'Name' }, { key: 'url', label: 'Audio URL' }]} />
+                            <ItemList items={demos} collName="demos" onReorder={(newItems) => handleReorder("demos", newItems)} onDelete={deleteItem} editingId={editingId} setEditingId={setEditingId} editForm={editForm} setEditForm={setEditForm} onSave={updateItem} onCancel={() => setEditingId(null)} fields={[{ key: 'name', label: 'Name' }, { key: 'url', label: 'Audio URL' }]} />
                         </div>
                     )}
 
@@ -724,7 +726,7 @@ export default function Admin() {
                                     {fetchingTitle ? 'Fetching Title...' : 'Add Project'}
                                 </button>
                             </form>
-                            <ItemList items={videos} collName="videos" onMove={handleMove} onDelete={deleteItem} editingId={editingId} setEditingId={setEditingId} editForm={editForm} setEditForm={setEditForm} onSave={updateItem} onCancel={() => setEditingId(null)} fields={[{ key: 'title', label: 'Title' }, { key: 'youtube_id', label: 'YouTube ID' }]} />
+                            <ItemList items={videos} collName="videos" onReorder={(newItems) => handleReorder("videos", newItems)} onDelete={deleteItem} editingId={editingId} setEditingId={setEditingId} editForm={editForm} setEditForm={setEditForm} onSave={updateItem} onCancel={() => setEditingId(null)} fields={[{ key: 'title', label: 'Title' }, { key: 'youtube_id', label: 'YouTube ID' }]} />
                         </div>
                     )}
 
@@ -736,7 +738,7 @@ export default function Admin() {
                                 <FormInput label="Image URL" placeholder="https://..." value={newStudio.url} onChange={v => setNewStudio({ ...newStudio, url: v })} />
                                 <button type="submit" disabled={uploading || !newStudio.name || !newStudio.url} className="text-white py-3 px-6 rounded-xl font-bold transition-all disabled:opacity-50 bg-[var(--theme-primary)] hover:opacity-90 shadow-lg shadow-[var(--theme-primary)]/30">Add Gear</button>
                             </form>
-                            <ItemList items={studio} collName="studio" onMove={handleMove} onDelete={deleteItem} editingId={editingId} setEditingId={setEditingId} editForm={editForm} setEditForm={setEditForm} onSave={updateItem} onCancel={() => setEditingId(null)} fields={[{ key: 'name', label: 'Gear Name' }, { key: 'url', label: 'Image URL' }]} />
+                            <ItemList items={studio} collName="studio" onReorder={(newItems) => handleReorder("studio", newItems)} onDelete={deleteItem} editingId={editingId} setEditingId={setEditingId} editForm={editForm} setEditForm={setEditForm} onSave={updateItem} onCancel={() => setEditingId(null)} fields={[{ key: 'name', label: 'Gear Name' }, { key: 'url', label: 'Image URL' }]} />
                         </div>
                     )}
 
@@ -747,7 +749,7 @@ export default function Admin() {
                                 <FormInput label="Client Logo URL" placeholder="https://..." value={newClient.url} onChange={v => setNewClient({ url: v })} containerClass="flex-1" />
                                 <button type="submit" disabled={uploading || !newClient.url} className="text-white py-3 px-6 rounded-xl font-bold transition-all disabled:opacity-50 bg-[var(--theme-primary)] hover:opacity-90 shadow-lg shadow-[var(--theme-primary)]/30">Add Client</button>
                             </form>
-                            <ItemList items={clients} collName="clients" onMove={handleMove} onDelete={deleteItem} editingId={editingId} setEditingId={setEditingId} editForm={editForm} setEditForm={setEditForm} onSave={updateItem} onCancel={() => setEditingId(null)} fields={[{ key: 'url', label: 'Logo URL' }]} />
+                            <ItemList items={clients} collName="clients" onReorder={(newItems) => handleReorder("clients", newItems)} onDelete={deleteItem} editingId={editingId} setEditingId={setEditingId} editForm={editForm} setEditForm={setEditForm} onSave={updateItem} onCancel={() => setEditingId(null)} fields={[{ key: 'url', label: 'Logo URL' }]} />
                         </div>
                     )}
 
@@ -761,7 +763,7 @@ export default function Admin() {
                                 </div>
                                 <button type="submit" disabled={uploading || !newReview.text || !newReview.author} className="text-white py-3 px-8 rounded-xl font-bold transition-all self-end disabled:opacity-50 bg-[var(--theme-primary)] hover:opacity-90 shadow-lg shadow-[var(--theme-primary)]/30">Add Review</button>
                             </form>
-                            <ItemList items={reviews} collName="reviews" onMove={handleMove} onDelete={deleteItem} editingId={editingId} setEditingId={setEditingId} editForm={editForm} setEditForm={setEditForm} onSave={updateItem} onCancel={() => setEditingId(null)} fields={[{ key: 'text', label: 'Review' }, { key: 'author', label: 'Author' }]} />
+                            <ItemList items={reviews} collName="reviews" onReorder={(newItems) => handleReorder("reviews", newItems)} onDelete={deleteItem} editingId={editingId} setEditingId={setEditingId} editForm={editForm} setEditForm={setEditForm} onSave={updateItem} onCancel={() => setEditingId(null)} fields={[{ key: 'text', label: 'Review' }, { key: 'author', label: 'Author' }]} />
                         </div>
                     )}
 
@@ -781,41 +783,20 @@ export default function Admin() {
                                         <div className="space-y-4">
                                             <p className="text-sm text-slate-500">Rearrange the order of sections on your home page.</p>
                                             <div className="space-y-2">
-                                                {siteContent.sectionOrder.map((section, index) => (
-                                                    <div key={section} className="flex items-center justify-between p-3 bg-slate-50 rounded-lg border border-slate-200">
-                                                        <span className="font-medium text-slate-700 capitalize">{section}</span>
-                                                        <div className="flex gap-1">
-                                                            <button
-                                                                type="button"
-                                                                onClick={() => {
-                                                                    const newOrder = [...siteContent.sectionOrder];
-                                                                    if (index > 0) {
-                                                                        [newOrder[index], newOrder[index - 1]] = [newOrder[index - 1], newOrder[index]];
-                                                                        setSiteContent({ ...siteContent, sectionOrder: newOrder });
-                                                                    }
-                                                                }}
-                                                                disabled={index === 0}
-                                                                className="p-1 text-slate-400 hover:text-[var(--theme-primary)] disabled:opacity-30"
-                                                            >
-                                                                <ArrowUp size={18} />
-                                                            </button>
-                                                            <button
-                                                                type="button"
-                                                                onClick={() => {
-                                                                    const newOrder = [...siteContent.sectionOrder];
-                                                                    if (index < siteContent.sectionOrder.length - 1) {
-                                                                        [newOrder[index], newOrder[index + 1]] = [newOrder[index + 1], newOrder[index]];
-                                                                        setSiteContent({ ...siteContent, sectionOrder: newOrder });
-                                                                    }
-                                                                }}
-                                                                disabled={index === siteContent.sectionOrder.length - 1}
-                                                                className="p-1 text-slate-400 hover:text-[var(--theme-primary)] disabled:opacity-30"
-                                                            >
-                                                                <ArrowDown size={18} />
-                                                            </button>
-                                                        </div>
-                                                    </div>
-                                                ))}
+                                                <Reorder.Group axis="y" values={siteContent.sectionOrder} onReorder={(newOrder) => setSiteContent({ ...siteContent, sectionOrder: newOrder })}>
+                                                    {siteContent.sectionOrder.map((section) => (
+                                                        <Reorder.Item key={section} value={section}>
+                                                            <div className="flex items-center justify-between p-3 bg-slate-50 rounded-lg border border-slate-200 mb-2 cursor-move hover:bg-slate-100 transition-colors">
+                                                                <div className="flex items-center gap-3">
+                                                                    <div className="text-slate-300">
+                                                                        <GripVertical size={18} />
+                                                                    </div>
+                                                                    <span className="font-medium text-slate-700 capitalize">{section}</span>
+                                                                </div>
+                                                            </div>
+                                                        </Reorder.Item>
+                                                    ))}
+                                                </Reorder.Group>
                                             </div>
                                         </div>
                                     </Section>
@@ -901,7 +882,7 @@ export default function Admin() {
     );
 }
 
-function ItemList({ items, collName, onMove, onDelete, editingId, setEditingId, editForm, setEditForm, onSave, onCancel, fields }) {
+function ItemList({ items, collName, onReorder, onDelete, editingId, setEditingId, editForm, setEditForm, onSave, onCancel, fields }) {
     return (
         <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden divide-y divide-slate-50">
             {items.length === 0 && (
@@ -909,104 +890,107 @@ function ItemList({ items, collName, onMove, onDelete, editingId, setEditingId, 
                     No items found in this section.
                 </div>
             )}
-            {items.map((item, index) => (
-                <div key={item.id} className="p-6 flex items-start gap-4 group hover:bg-slate-50/50 transition-colors">
-                    <div className="flex flex-col gap-1 border-r border-slate-100 pr-3 mt-1">
-                        <button onClick={() => onMove(collName, index, 'up')} disabled={index === 0} className="p-1 text-slate-300 hover:text-[var(--theme-primary)] disabled:opacity-30 transition-colors"><ArrowUp size={16} /></button>
-                        <button onClick={() => onMove(collName, index, 'down')} disabled={index === items.length - 1} className="p-1 text-slate-300 hover:text-[var(--theme-primary)] disabled:opacity-30 transition-colors"><ArrowDown size={16} /></button>
-                    </div>
-
-                    {/* Preview Column - for videos, studio, and clients */}
-                    {(collName === 'videos' || collName === 'studio' || collName === 'clients') && (
-                        <div className="w-24 h-16 flex-shrink-0 bg-slate-100 rounded-lg overflow-hidden">
-                            {collName === 'videos' && (item.youtubeId || item.youtube_id) && (
-                                <img
-                                    src={`https://img.youtube.com/vi/${item.youtubeId || item.youtube_id}/mqdefault.jpg`}
-                                    alt="Video thumbnail"
-                                    className="w-full h-full object-cover"
-                                />
-                            )}
-                            {collName === 'studio' && item.url && (
-                                <img
-                                    src={item.url}
-                                    alt={item.name}
-                                    className="w-full h-full object-contain p-2"
-                                    onError={(e) => { e.target.parentElement.innerHTML = '<div class="w-full h-full flex items-center justify-center text-slate-400 text-xs">No preview</div>'; }}
-                                />
-                            )}
-                            {collName === 'clients' && item.url && (
-                                <img
-                                    src={item.url}
-                                    alt="Client logo"
-                                    className="w-full h-full object-contain p-2"
-                                    onError={(e) => { e.target.parentElement.innerHTML = '<div class="w-full h-full flex items-center justify-center text-slate-400 text-xs">No preview</div>'; }}
-                                />
-                            )}
-                        </div>
-                    )}
-
-                    <div className="flex-1 min-w-0">
-                        {editingId === item.id ? (
-                            <div className="space-y-3">
-                                {fields.map(f => (
-                                    <div key={f.key}>
-                                        <label className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">{f.label}</label>
-                                        <input
-                                            type="text"
-                                            value={editForm[f.key] || ""}
-                                            onChange={e => setEditForm({ ...editForm, [f.key]: e.target.value })}
-                                            className="w-full px-3 py-1.5 bg-white border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-[var(--theme-primary)]/20 focus:border-[var(--theme-primary)]"
-                                        />
-                                    </div>
-                                ))}
+            <Reorder.Group axis="y" values={items} onReorder={onReorder}>
+                {items.map((item, index) => (
+                    <Reorder.Item key={item.id} value={item} className="bg-white">
+                        <div className="p-6 flex items-start gap-4 group hover:bg-slate-50/50 transition-colors">
+                            <div className="flex flex-col gap-1 border-r border-slate-100 pr-3 mt-1 cursor-grab active:cursor-grabbing text-slate-300 hover:text-slate-500">
+                                <GripVertical size={20} />
                             </div>
-                        ) : (
-                            <div className="py-1">
-                                {/* Special display for videos - show YouTube title */}
-                                {collName === 'videos' && item.youtubeId ? (
-                                    <>
-                                        <div className="font-bold text-slate-800 text-base mb-1">
-                                            {item.title || 'YouTube Video'}
-                                        </div>
-                                        <div className="text-xs text-slate-400 font-mono">
-                                            ID: {item.youtubeId}
-                                        </div>
-                                        <a
-                                            href={`https://youtube.com/watch?v=${item.youtubeId}`}
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            className="text-xs hover:text-[var(--theme-primary)] underline mt-1 inline-block text-[var(--theme-primary)]/80"
-                                        >
-                                            View on YouTube →
-                                        </a>
-                                    </>
+
+                            {/* Preview Column - for videos, studio, and clients */}
+                            {(collName === 'videos' || collName === 'studio' || collName === 'clients') && (
+                                <div className="w-24 h-16 flex-shrink-0 bg-slate-100 rounded-lg overflow-hidden">
+                                    {collName === 'videos' && (item.youtubeId || item.youtube_id) && (
+                                        <img
+                                            src={`https://img.youtube.com/vi/${item.youtubeId || item.youtube_id}/mqdefault.jpg`}
+                                            alt="Video thumbnail"
+                                            className="w-full h-full object-cover"
+                                        />
+                                    )}
+                                    {collName === 'studio' && item.url && (
+                                        <img
+                                            src={item.url}
+                                            alt={item.name}
+                                            className="w-full h-full object-contain p-2"
+                                            onError={(e) => { e.target.parentElement.innerHTML = '<div class="w-full h-full flex items-center justify-center text-slate-400 text-xs">No preview</div>'; }}
+                                        />
+                                    )}
+                                    {collName === 'clients' && item.url && (
+                                        <img
+                                            src={item.url}
+                                            alt="Client logo"
+                                            className="w-full h-full object-contain p-2"
+                                            onError={(e) => { e.target.parentElement.innerHTML = '<div class="w-full h-full flex items-center justify-center text-slate-400 text-xs">No preview</div>'; }}
+                                        />
+                                    )}
+                                </div>
+                            )}
+
+                            <div className="flex-1 min-w-0">
+                                {editingId === item.id ? (
+                                    <div className="space-y-3">
+                                        {fields.map(f => (
+                                            <div key={f.key}>
+                                                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">{f.label}</label>
+                                                <input
+                                                    type="text"
+                                                    value={editForm[f.key] || ""}
+                                                    onChange={e => setEditForm({ ...editForm, [f.key]: e.target.value })}
+                                                    className="w-full px-3 py-1.5 bg-white border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-[var(--theme-primary)]/20 focus:border-[var(--theme-primary)]"
+                                                />
+                                            </div>
+                                        ))}
+                                    </div>
                                 ) : (
-                                    /* Default display for other types */
-                                    fields.map((f, i) => (
-                                        <div key={f.key} className={i === 0 ? "font-bold text-slate-800 text-lg truncate" : "text-sm text-slate-400 truncate mt-0.5"}>
-                                            {item[f.key]}
-                                        </div>
-                                    ))
+                                    <div className="py-1">
+                                        {/* Special display for videos - show YouTube title */}
+                                        {collName === 'videos' && item.youtubeId ? (
+                                            <>
+                                                <div className="font-bold text-slate-800 text-base mb-1">
+                                                    {item.title || 'YouTube Video'}
+                                                </div>
+                                                <div className="text-xs text-slate-400 font-mono">
+                                                    ID: {item.youtubeId}
+                                                </div>
+                                                <a
+                                                    href={`https://youtube.com/watch?v=${item.youtubeId}`}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    className="text-xs hover:text-[var(--theme-primary)] underline mt-1 inline-block text-[var(--theme-primary)]/80"
+                                                >
+                                                    View on YouTube →
+                                                </a>
+                                            </>
+                                        ) : (
+                                            /* Default display for other types */
+                                            fields.map((f, i) => (
+                                                <div key={f.key} className={i === 0 ? "font-bold text-slate-800 text-lg truncate" : "text-sm text-slate-400 truncate mt-0.5"}>
+                                                    {item[f.key]}
+                                                </div>
+                                            ))
+                                        )}
+                                    </div>
                                 )}
                             </div>
-                        )}
-                    </div>
 
-                    <div className="flex gap-1 pt-1">
-                        {editingId === item.id ? (
-                            <>
-                                <button onClick={() => onSave(collName, item.id)} className="p-2 text-green-600 hover:bg-green-50 rounded-xl transition-all"><Save size={20} /></button>
-                                <button onClick={onCancel} className="p-2 text-slate-400 hover:bg-slate-100 rounded-xl transition-all"><X size={20} /></button>
-                            </>
-                        ) : (
-                            <>
-                                <button onClick={() => { setEditingId(item.id); setEditForm(item); }} className="p-2 text-slate-300 hover:text-[var(--theme-primary)] hover:bg-[var(--theme-primary)]/10 rounded-xl transition-all opacity-0 group-hover:opacity-100"><Edit2 size={18} /></button>
-                                <button onClick={() => onDelete(collName, item.id)} className="p-2 text-slate-300 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all opacity-0 group-hover:opacity-100"><Trash2 size={18} /></button>
-                            </>
-                        )}
-                    </div>
-                </div>
-            ))}
+                            <div className="flex gap-1 pt-1">
+                                {editingId === item.id ? (
+                                    <>
+                                        <button onClick={() => onSave(collName, item.id)} className="p-2 text-green-600 hover:bg-green-50 rounded-xl transition-all"><Save size={20} /></button>
+                                        <button onClick={onCancel} className="p-2 text-slate-400 hover:bg-slate-100 rounded-xl transition-all"><X size={20} /></button>
+                                    </>
+                                ) : (
+                                    <>
+                                        <button onClick={() => { setEditingId(item.id); setEditForm(item); }} className="p-2 text-slate-300 hover:text-[var(--theme-primary)] hover:bg-[var(--theme-primary)]/10 rounded-xl transition-all opacity-0 group-hover:opacity-100"><Edit2 size={18} /></button>
+                                        <button onClick={() => onDelete(collName, item.id)} className="p-2 text-slate-300 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all opacity-0 group-hover:opacity-100"><Trash2 size={18} /></button>
+                                    </>
+                                )}
+                            </div>
+                        </div>
+                    </Reorder.Item>
+                ))}
+            </Reorder.Group>
         </div>
     );
 }
