@@ -5,25 +5,54 @@ import { motion } from "framer-motion";
 import { demos as staticDemos } from "../content/demos";
 import { supabase } from "../lib/supabase";
 
-export default function AudioPlayer() {
+export default function AudioPlayer({
+    tracks: propTracks,
+    currentTrackIndex: propIndex,
+    isPlaying: propIsPlaying,
+    onPlayPause,
+    onNext,
+    onPrev,
+    onSeek,
+    currentTime: propCurrentTime,
+    duration: propDuration,
+    onTrackSelect
+}) {
     const { uid } = useParams();
-    const [tracks, setTracks] = useState(staticDemos);
-    const [currentTrackIndex, setCurrentTrackIndex] = useState(0);
+    const [localTracks, setLocalTracks] = useState(staticDemos);
+    const [localIndex, setLocalIndex] = useState(0);
+    const [localIsPlaying, setLocalIsPlaying] = useState(false);
+
+    // Use props if provided (Controlled mode), otherwise local state (Uncontrolled mode)
+    const isControlled = propTracks !== undefined;
+
+    const tracks = isControlled ? propTracks : localTracks;
+    const currentTrackIndex = isControlled ? propIndex : localIndex;
+    const isPlaying = isControlled ? propIsPlaying : localIsPlaying;
+    const currentTime = isControlled ? propCurrentTime : 0; // Local implementation below needs fix if we want full local support without props, but for now we focus on the transition.
+    const duration = isControlled ? propDuration : 0;
+
+    // For local audio handling (legacy support if not controlled)
+    const audioRef = useRef(null);
+    const [localCurrentTime, setLocalCurrentTime] = useState(0);
+    const [localDuration, setLocalDuration] = useState(0);
+
+    const effectiveCurrentTime = isControlled ? propCurrentTime : localCurrentTime;
+    const effectiveDuration = isControlled ? propDuration : localDuration;
 
     useEffect(() => {
-        if (!uid) return;
+        if (isControlled || !uid) return;
 
         const fetchTracks = async () => {
             const { data, error } = await supabase.from('demos').select('*').eq('user_id', uid).order('order', { ascending: true });
             if (error) {
                 console.error("Error fetching demos:", error);
             } else if (data && data.length > 0) {
-                setTracks(data); // Supabase returns array of objects, similar structure to what we expect
+                setLocalTracks(data); // Supabase returns array of objects, similar structure to what we expect
             }
         };
 
         fetchTracks();
-    }, [uid]);
+    }, [uid, isControlled]);
 
     // Utility to convert various link types (like Google Drive) to direct play links
     const getPlayableUrl = (url) => {
@@ -40,61 +69,73 @@ export default function AudioPlayer() {
         return url;
     };
 
-    const [isPlaying, setIsPlaying] = useState(false);
-    const [duration, setDuration] = useState(0);
-    const [currentTime, setCurrentTime] = useState(0);
-    const audioRef = useRef(null);
+    // If not controlled, we need these. If controlled, they are ignored or passed in.
+    // const [isPlaying, setIsPlaying] = useState(false); -> handled above
 
-    const currentTrack = tracks[currentTrackIndex];
+    // Legacy local logic
+    const currentTrack = tracks[currentTrackIndex] || {}; // Safety check
 
     useEffect(() => {
-        if (isPlaying) {
-            audioRef.current.play().catch(() => setIsPlaying(false));
+        if (isControlled) return;
+        if (localIsPlaying) {
+            audioRef.current.play().catch(() => setLocalIsPlaying(false));
         } else {
             audioRef.current.pause();
         }
-    }, [isPlaying, currentTrackIndex]);
+    }, [localIsPlaying, currentTrackIndex, isControlled]);
 
-    const togglePlay = () => setIsPlaying(!isPlaying);
+    const togglePlay = () => {
+        if (isControlled) onPlayPause();
+        else setLocalIsPlaying(!localIsPlaying);
+    };
 
     const handleTimeUpdate = () => {
         if (audioRef.current) {
-            setCurrentTime(audioRef.current.currentTime);
+            setLocalCurrentTime(audioRef.current.currentTime);
         }
     };
 
     const handleLoadedMetadata = () => {
-        setDuration(audioRef.current.duration);
-        if (isPlaying) audioRef.current.play().catch(() => setIsPlaying(false));
+        setLocalDuration(audioRef.current.duration);
+        if (localIsPlaying) audioRef.current.play().catch(() => setLocalIsPlaying(false));
     };
 
     const handleEnded = () => {
-        nextTrack();
+        if (isControlled && onNext) onNext();
+        else nextTrack();
     };
 
     const nextTrack = () => {
-        setCurrentTrackIndex((prev) => (prev + 1) % tracks.length);
+        if (isControlled && onNext) onNext();
+        else setLocalIndex((prev) => (prev + 1) % tracks.length);
     };
 
     const prevTrack = () => {
-        setCurrentTrackIndex((prev) => (prev - 1 + tracks.length) % tracks.length);
+        if (isControlled && onPrev) onPrev();
+        else setLocalIndex((prev) => (prev - 1 + tracks.length) % tracks.length);
     };
 
     const handleSeek = (e) => {
         const time = parseFloat(e.target.value);
-        audioRef.current.currentTime = time;
-        setCurrentTime(time);
+        if (isControlled && onSeek) {
+            onSeek(time);
+        } else {
+            audioRef.current.currentTime = time;
+            setLocalCurrentTime(time);
+        }
     };
 
     return (
         <div className="w-full max-w-md mx-auto p-4 bg-white rounded-2xl border border-slate-200 shadow-xl">
-            <audio
-                ref={audioRef}
-                src={getPlayableUrl(currentTrack.url)}
-                onTimeUpdate={handleTimeUpdate}
-                onLoadedMetadata={handleLoadedMetadata}
-                onEnded={handleEnded}
-            />
+            {!isControlled && (
+                <audio
+                    ref={audioRef}
+                    src={getPlayableUrl(currentTrack.url)}
+                    onTimeUpdate={handleTimeUpdate}
+                    onLoadedMetadata={handleLoadedMetadata}
+                    onEnded={handleEnded}
+                />
+            )}
 
             <div className="flex flex-col gap-4">
                 <div className="text-center">
@@ -124,7 +165,7 @@ export default function AudioPlayer() {
 
                     <button
                         onClick={togglePlay}
-                        className="p-2.5 bg-[var(--theme-primary)] hover:brightness-90 rounded-full text-white shadow-md shadow-slate-300 transition-all transform hover:scale-105"
+                        className={`p-2.5 bg-[var(--theme-primary)] hover:brightness-90 rounded-full text-white transition-all transform ${isPlaying ? "shadow-md shadow-slate-300 scale-105" : ""}`}
                     >
                         {isPlaying ? <Pause size={20} fill="currentColor" /> : <Play size={20} fill="currentColor" className="ml-0.5" />}
                     </button>
@@ -140,16 +181,19 @@ export default function AudioPlayer() {
                             <button
                                 key={i}
                                 onClick={() => {
-                                    setCurrentTrackIndex(i);
-                                    setIsPlaying(true);
+                                    if (isControlled && onTrackSelect) {
+                                        onTrackSelect(i);
+                                    } else {
+                                        setLocalIndex(i);
+                                        setLocalIsPlaying(true);
+                                    }
                                 }}
-                                className={`w-full flex items-center justify-between p-2 rounded-md text-sm transition-all ${currentTrackIndex === i
-                                    ? "bg-[var(--theme-primary)]/10 text-[var(--theme-primary)] border border-[var(--theme-primary)]/20"
+                                className={`w-full flex items-center justify-between p-2 rounded-md text-sm transition-all ${currentTrackIndex === i && isPlaying
+                                    ? "bg-[var(--theme-primary)]/10 text-[var(--theme-primary)]"
                                     : "hover:bg-slate-50 text-slate-600 hover:text-[var(--theme-primary)]"
                                     }`}
                             >
                                 <div className="flex items-center gap-3 overflow-hidden">
-                                    <span className="text-[10px] font-mono opacity-50 flex-shrink-0">0{i + 1}</span>
                                     <span className="font-medium truncate text-xs sm:text-sm">{track.name}</span>
                                 </div>
                                 {currentTrackIndex === i && isPlaying && (
@@ -171,7 +215,6 @@ export default function AudioPlayer() {
             </div>
         </div>
     );
-
 }
 
 function formatTime(seconds) {

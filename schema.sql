@@ -64,6 +64,8 @@ create table public.site_settings (
   site_name text,
   profile_image text,
   profile_cartoon text,
+  show_cartoon boolean default true,
+  clients_grayscale boolean default true,
   theme_color text,
   section_order jsonb default '["demos", "projects", "studio", "clients", "reviews", "about", "contact"]'::jsonb,
   font text default 'Outfit'
