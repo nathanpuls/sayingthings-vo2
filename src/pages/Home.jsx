@@ -503,7 +503,7 @@ export default function Home() {
       </nav>
       {siteContent.sectionOrder.map((section, index) => {
         const isFirst = index === 0;
-        const basePadding = isFirst ? "pt-32 pb-8 md:pt-40 md:pb-12" : "py-8 md:py-12";
+        const basePadding = isFirst ? "pt-32 pb-6 md:pt-40 md:pb-10" : "py-6 md:py-10";
 
         switch (section) {
           case 'demos':
