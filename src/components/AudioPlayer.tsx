@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import { Play, Pause, SkipBack, SkipForward } from "lucide-react";
 import { motion } from "framer-motion";
-import { demos as staticDemos } from "../content/demos"; // Assume this is still js or needs update
+
 import { supabase } from "../lib/supabase";
 import { Database } from "../lib/database.types";
 
@@ -19,6 +19,7 @@ interface AudioPlayerProps {
     currentTime?: number;
     duration?: number;
     onTrackSelect?: (index: number) => void;
+    ownerName?: string;
 }
 
 export default function AudioPlayer({
@@ -31,10 +32,11 @@ export default function AudioPlayer({
     onSeek,
     currentTime: propCurrentTime,
     duration: propDuration,
-    onTrackSelect
+    onTrackSelect,
+    ownerName
 }: AudioPlayerProps) {
     const { uid } = useParams();
-    const [localTracks, setLocalTracks] = useState<Demo[]>(staticDemos as unknown as Demo[]);
+    const [localTracks, setLocalTracks] = useState<Demo[]>([]);
     const [localIndex, setLocalIndex] = useState(0);
     const [localIsPlaying, setLocalIsPlaying] = useState(false);
 
@@ -159,9 +161,9 @@ export default function AudioPlayer({
             <div className="flex flex-col gap-4">
                 <div className="text-center">
                     <h3 className="text-lg font-bold bg-gradient-to-r from-[var(--theme-primary)] to-[var(--theme-primary)] bg-clip-text text-transparent truncate px-2">
-                        {currentTrack.name || "Unknown Track"}
+                        {currentTrack.name || (tracks.length === 0 ? "Loading demos..." : "Unknown Track")}
                     </h3>
-                    <p className="text-slate-500 text-xs mt-0.5">Nathan Puls Voice Over</p>
+                    <p className="text-slate-500 text-xs mt-0.5">{ownerName || "Voice Over Artist"}</p>
                 </div>
 
                 <div className="flex items-center gap-3">
@@ -242,4 +244,3 @@ function formatTime(seconds: number | undefined) {
     const s = Math.floor(seconds % 60);
     return `${m}:${s < 10 ? "0" : ""}${s}`;
 }
-

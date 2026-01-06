@@ -646,6 +646,7 @@ export default function Home() {
                         setCurrentAudioIndex(i);
                         setIsAudioPlaying(true);
                       }}
+                      ownerName={siteContent.siteName}
                     />
                   </FadeInSection>
                 </section>
