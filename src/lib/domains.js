@@ -61,7 +61,7 @@ export function isCustomDomain() {
  * @returns {string}
  */
 export function generateVerificationToken() {
-    return `built-verify-${Math.random().toString(36).substring(2, 15)}${Math.random().toString(36).substring(2, 15)}`;
+    return `builtat-verify-${Math.random().toString(36).substring(2, 15)}${Math.random().toString(36).substring(2, 15)}`;
 }
 
 /**
