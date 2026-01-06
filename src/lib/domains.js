@@ -61,7 +61,7 @@ export function isCustomDomain() {
  * @returns {string}
  */
 export function generateVerificationToken() {
-    return `sayingthings-verify-${Math.random().toString(36).substring(2, 15)}${Math.random().toString(36).substring(2, 15)}`;
+    return `built-verify-${Math.random().toString(36).substring(2, 15)}${Math.random().toString(36).substring(2, 15)}`;
 }
 
 /**
@@ -74,7 +74,7 @@ export async function verifyDomainOwnership(domain, token) {
     try {
         // Check using Cloudflare DNS over HTTPS (works in browser!)
         const checkDns = async (provider) => {
-            const hostname = `_sayingthings-verify.${domain}`;
+            const hostname = `_built-verify.${domain}`;
             const url = `${provider}?name=${hostname}&type=TXT`;
 
             const res = await fetch(url, {
