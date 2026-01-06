@@ -4,7 +4,7 @@ import { Link } from "react-router-dom";
 import {
     Trash2, Edit2, Plus, Save, X, LogOut, LogIn, UploadCloud,
     Home, ArrowUp, ArrowDown, Music, Video, Mic, Users,
-    MessageSquare, Contact, Info, Settings, Share2, Type, GripVertical, Mail, Globe, CheckCircle, AlertCircle, Copy
+    MessageSquare, Contact, Info, Settings, Share2, Type, GripVertical, Mail, Globe, CheckCircle, AlertCircle, Copy, Eye, EyeOff
 } from "lucide-react";
 import { motion, Reorder, AnimatePresence } from "framer-motion";
 import { getUserCustomDomains, addCustomDomain, removeCustomDomain, verifyDomainOwnership } from "../lib/domains";
@@ -56,6 +56,7 @@ export default function Admin() {
         clientsGrayscale: false,
         themeColor: "#6366f1",
         sectionOrder: ["demos", "projects", "studio", "clients", "reviews", "about", "contact"],
+        hiddenSections: [],
         font: "Outfit",
         web3FormsKey: "",
         showContactForm: true
@@ -195,7 +196,8 @@ export default function Admin() {
                 sectionOrder: settings.section_order || ["demos", "projects", "studio", "clients", "reviews", "about", "contact"],
                 font: settings.font || "Outfit",
                 web3FormsKey: settings.web3_forms_key || "",
-                showContactForm: settings.show_contact_form !== false
+                showContactForm: settings.show_contact_form !== false,
+                hiddenSections: settings.hidden_sections || []
             });
             // Apply font immediately just in case
             applyFont(settings.font || "Outfit");
@@ -441,7 +443,8 @@ export default function Admin() {
                 section_order: siteContent.sectionOrder,
                 font: siteContent.font,
                 web3_forms_key: siteContent.web3FormsKey,
-                show_contact_form: siteContent.showContactForm
+                show_contact_form: siteContent.showContactForm,
+                hidden_sections: siteContent.hiddenSections
             };
 
             const { error } = await supabase.from('site_settings').upsert(payload, { onConflict: 'user_id' });
@@ -922,11 +925,25 @@ export default function Admin() {
                                                 <Reorder.Group axis="y" values={siteContent.sectionOrder} onReorder={(newOrder) => setSiteContent({ ...siteContent, sectionOrder: newOrder })}>
                                                     {siteContent.sectionOrder.map((section) => (
                                                         <Reorder.Item key={section} value={section}>
-                                                            <div className="flex items-center justify-between p-3 bg-slate-50 rounded-lg border border-slate-200 mb-2 cursor-move hover:bg-slate-100 transition-colors">
+                                                            <div className={`flex items-center justify-between p-3 bg-slate-50 rounded-lg border border-slate-200 mb-2 cursor-move hover:bg-slate-100 transition-colors ${(siteContent.hiddenSections || []).includes(section) ? 'opacity-60 border-dashed bg-slate-100' : ''}`}>
                                                                 <div className="flex items-center gap-3">
                                                                     <div className="text-slate-300"><GripVertical size={18} /></div>
                                                                     <span className="font-medium text-slate-700 capitalize">{section}</span>
                                                                 </div>
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => {
+                                                                        const current = siteContent.hiddenSections || [];
+                                                                        const newHidden = current.includes(section)
+                                                                            ? current.filter(s => s !== section)
+                                                                            : [...current, section];
+                                                                        setSiteContent({ ...siteContent, hiddenSections: newHidden });
+                                                                    }}
+                                                                    className="text-slate-400 hover:text-slate-600 p-1 rounded-md hover:bg-slate-200 transition-colors"
+                                                                    title={(siteContent.hiddenSections || []).includes(section) ? "Show section" : "Hide section"}
+                                                                >
+                                                                    {(siteContent.hiddenSections || []).includes(section) ? <EyeOff size={18} /> : <Eye size={18} />}
+                                                                </button>
                                                             </div>
                                                         </Reorder.Item>
                                                     ))}
