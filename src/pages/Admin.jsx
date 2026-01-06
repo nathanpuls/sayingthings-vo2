@@ -832,7 +832,7 @@ export default function Admin() {
                                                 {!domain.verified && (
                                                     <div className="p-4 bg-white space-y-4">
                                                         <div className="text-sm text-slate-600">
-                                                            To verify ownership, please add the following two records to your DNS settings:
+                                                            To verify ownership, add these records to your DNS provider (e.g. <a href="https://dash.cloudflare.com" target="_blank" rel="noopener noreferrer" className="text-[var(--theme-primary)] hover:underline font-medium">Cloudflare</a>, GoDaddy).
                                                         </div>
 
                                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
