@@ -147,7 +147,11 @@ export default function Admin() {
 
         // Fetch ordered lists
         const fetchTable = async (table) => {
-            const { data, error } = await supabase.from(table).select('*').order('order', { ascending: true });
+            const { data, error } = await supabase
+                .from(table)
+                .select('*')
+                .eq('user_id', user.id)
+                .order('order', { ascending: true });
             if (error) console.error(`Error fetching ${table}:`, error);
             return data || [];
         };
@@ -160,12 +164,20 @@ export default function Admin() {
         setCustomDomains(await getUserCustomDomains());
 
         // Fetch messages - no 'order' column needed, use 'created_at'
-        const { data: msgs, error: msgError } = await supabase.from('messages').select('*').order('created_at', { ascending: false });
+        const { data: msgs, error: msgError } = await supabase
+            .from('messages')
+            .select('*')
+            .eq('user_id', user.id)
+            .order('created_at', { ascending: false });
         if (msgError) console.error("Error fetching messages:", msgError);
         setMessages(msgs || []);
 
         // Fetch settings - singular row per user
-        const { data: settings } = await supabase.from('site_settings').select('*').single();
+        const { data: settings } = await supabase
+            .from('site_settings')
+            .select('*')
+            .eq('user_id', user.id)
+            .single();
         if (settings) {
             setSiteContent({
                 heroTitle: settings.hero_title || "",
