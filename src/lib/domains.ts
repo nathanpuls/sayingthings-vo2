@@ -6,11 +6,8 @@ export async function getUserIdFromDomain(): Promise<string | null> {
     // List of your main domains (add your production domain here)
     const mainDomains = [
         'localhost',
-        'sayingthings.com',
-        'www.sayingthings.com',
         'built.at',
         'www.built.at',
-        // Add your Vercel/Netlify domains here
     ];
 
     // If on main domain, return null (will use URL-based routing)

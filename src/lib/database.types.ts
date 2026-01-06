@@ -211,6 +211,7 @@ export interface Database {
                     web3_forms_key: string | null
                     show_contact_form: boolean
                     hidden_sections: string[] | null
+                    favicon: string | null
                     created_at: string
                 }
                 Insert: {
@@ -232,6 +233,7 @@ export interface Database {
                     web3_forms_key?: string | null
                     show_contact_form?: boolean
                     hidden_sections?: string[] | null
+                    favicon?: string | null
                     created_at?: string
                 }
                 Update: {
@@ -253,6 +255,7 @@ export interface Database {
                     web3_forms_key?: string | null
                     show_contact_form?: boolean
                     hidden_sections?: string[] | null
+                    favicon?: string | null
                     created_at?: string
                 }
             }

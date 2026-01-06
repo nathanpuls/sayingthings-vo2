@@ -258,7 +258,8 @@ export default function Home() {
           hiddenSections: (settings.hidden_sections as any) || [],
           font: settings.font || "Outfit",
           web3FormsKey: settings.web3_forms_key || "",
-          showContactForm: settings.show_contact_form !== false
+          showContactForm: settings.show_contact_form !== false,
+          favicon: settings.favicon || ""
         });
         if (settings.font) applyFont(settings.font);
       }
@@ -320,6 +321,21 @@ export default function Home() {
       document.title = siteContent.siteName;
     }
   }, [showLanding, siteContent.siteName]);
+
+  // Update favicon
+  useEffect(() => {
+    if (!showLanding && siteContent.favicon) {
+      const link = document.querySelector("link[rel~='icon']") as HTMLLinkElement;
+      if (link) {
+        link.href = siteContent.favicon;
+      } else {
+        const newLink = document.createElement('link');
+        newLink.rel = 'icon';
+        newLink.href = siteContent.favicon;
+        document.head.appendChild(newLink);
+      }
+    }
+  }, [showLanding, siteContent.favicon]);
 
   const navLinkDetails = {
     demos: "Demos",

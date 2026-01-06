@@ -42,6 +42,7 @@ interface SiteContentState {
     font: string;
     web3FormsKey: string;
     showContactForm: boolean;
+    favicon: string;
 }
 
 // const authorizedEmail = "natepuls@gmail.com";
@@ -106,7 +107,8 @@ export default function Admin() {
         hiddenSections: [],
         font: "Outfit",
         web3FormsKey: "",
-        showContactForm: true
+        showContactForm: true,
+        favicon: ""
     });
 
 
@@ -235,7 +237,8 @@ export default function Admin() {
                 font: settings.font || "Outfit",
                 web3FormsKey: settings.web3_forms_key || "",
                 showContactForm: settings.show_contact_form !== false,
-                hiddenSections: (settings.hidden_sections as any) || []
+                hiddenSections: (settings.hidden_sections as any) || [],
+                favicon: settings.favicon || ""
             });
             if (settings.font) applyFont(settings.font);
         }
@@ -515,7 +518,8 @@ export default function Admin() {
                 font: siteContent.font,
                 web3_forms_key: siteContent.web3FormsKey,
                 show_contact_form: siteContent.showContactForm,
-                hidden_sections: siteContent.hiddenSections
+                hidden_sections: siteContent.hiddenSections,
+                favicon: siteContent.favicon
             };
 
             const { error } = await (supabase.from('site_settings' as any) as any).upsert(payload, { onConflict: 'user_id' });
@@ -1037,6 +1041,23 @@ export default function Admin() {
                                                         </button>
                                                     ))}
                                                 </div>
+                                            </div>
+
+                                            <div className="space-y-4 pt-4 border-t border-slate-50">
+                                                <div className="flex items-center justify-between">
+                                                    <div>
+                                                        <label className="block text-[11px] font-medium text-slate-400 mb-1 uppercase tracking-tight">Custom Favicon</label>
+                                                        <p className="text-xs text-slate-500">The small icon in the browser tab (.ico, .png)</p>
+                                                    </div>
+                                                    {siteContent.favicon && (
+                                                        <img src={siteContent.favicon} alt="Favicon" className="w-8 h-8 rounded-md bg-slate-50 border border-slate-200 object-contain" />
+                                                    )}
+                                                </div>
+                                                <FileUploader
+                                                    onUploadComplete={(url) => setSiteContent({ ...siteContent, favicon: url })}
+                                                    folder="favicons"
+                                                    accept="image/x-icon,image/png,image/svg+xml"
+                                                />
                                             </div>
                                         </div>
                                     </Section>
