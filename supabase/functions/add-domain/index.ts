@@ -155,26 +155,46 @@ serve(async (req: Request) => {
 
         console.log("Final Records to Save:", { ownershipName, ownershipValue, sslName, sslValue });
 
-        // 3. Upsert into Supabase
-        console.log("Upserting domain record...");
-        const { error: dbError } = await supabaseClient
+        // 3. Check if domain already exists, then update or insert
+        console.log("Checking if domain exists in database...");
+        const { data: existingDomain } = await supabaseClient
             .from('custom_domains')
-            .upsert({
-                user_id: user.id,
-                domain: domain,
-                verification_token: ownershipValue,
-                ownership_type: ownershipType,
-                ownership_name: ownershipName,
-                ownership_value: ownershipValue,
-                ssl_name: sslName,
-                ssl_value: sslValue,
-                updated_at: new Date().toISOString()
-            }, {
-                onConflict: 'domain'
-            })
+            .select('id')
+            .eq('domain', domain)
+            .maybeSingle();
+
+        const domainData = {
+            user_id: user.id,
+            domain: domain,
+            verification_token: ownershipValue,
+            ownership_type: ownershipType,
+            ownership_name: ownershipName,
+            ownership_value: ownershipValue,
+            ssl_name: sslName,
+            ssl_value: sslValue,
+            updated_at: new Date().toISOString()
+        };
+
+        let dbError;
+        if (existingDomain) {
+            // Update existing record
+            console.log("Domain exists, updating...");
+            const result = await supabaseClient
+                .from('custom_domains')
+                .update(domainData)
+                .eq('domain', domain);
+            dbError = result.error;
+        } else {
+            // Insert new record
+            console.log("Domain doesn't exist, inserting...");
+            const result = await supabaseClient
+                .from('custom_domains')
+                .insert({ ...domainData, verified: false });
+            dbError = result.error;
+        }
 
         if (dbError) {
-            console.error("Database Upsert Error:", dbError);
+            console.error("Database Operation Error:", dbError);
             throw dbError
         }
 
