@@ -906,10 +906,11 @@ export default function Admin() {
                                                                         showToast("Domain status refreshed", "success");
                                                                         fetchData();
                                                                     } else {
-                                                                        showToast(result.error || "Failed to refresh", "error");
+                                                                        const errMsg = result.error instanceof Error ? result.error.message : (typeof result.error === 'string' ? result.error : "Failed to refresh");
+                                                                        showToast(errMsg, "error");
                                                                     }
                                                                 } catch (err: any) {
-                                                                    showToast(err.message, "error");
+                                                                    showToast(err.message || "An unexpected error occurred", "error");
                                                                 } finally {
                                                                     setUploading(false);
                                                                 }

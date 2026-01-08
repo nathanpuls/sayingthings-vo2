@@ -103,13 +103,31 @@ export async function addCustomDomain(domain: string): Promise<{ success: boolea
             body: { domain: cleanDomain }
         });
 
-        if (error) throw error;
+        if (error) {
+            if ((error as any).context) {
+                const res = (error as any).context;
+                try {
+                    const text = await res.text();
+                    try {
+                        const json = JSON.parse(text);
+                        if (json.error) throw new Error(json.error);
+                        if (json.message) throw new Error(json.message);
+                    } catch (e2) {
+                        throw new Error(text || error.message);
+                    }
+                } catch (e) {
+                    throw error;
+                }
+            }
+            throw error;
+        }
         if (data && data.error) throw new Error(data.error);
 
         return { success: true, data };
-    } catch (err) {
+    } catch (err: any) {
         console.error("Add domain error:", err);
-        return { success: false, error: err };
+        const message = err.message || (typeof err === 'string' ? err : "An unknown error occurred");
+        return { success: false, error: message };
     }
 }
 

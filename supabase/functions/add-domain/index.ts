@@ -73,25 +73,36 @@ serve(async (req: Request) => {
         }
 
         // Real Cloudflare Implementation
+        console.log(`Checking Cloudflare for domain: ${domain} (Zone: ${cfZoneId})`);
+
         // 2a. Check if hostname already exists
-        const checkCfResponse = await fetch(
-            `https://api.cloudflare.com/client/v4/zones/${cfZoneId}/custom_hostnames?hostname=${domain}`,
-            {
-                method: 'GET',
-                headers: {
-                    'Authorization': `Bearer ${cfToken}`,
-                    'Content-Type': 'application/json',
-                },
-            }
-        )
-        const checkCfData = await checkCfResponse.json()
+        let checkCfData;
+        try {
+            const checkCfResponse = await fetch(
+                `https://api.cloudflare.com/client/v4/zones/${cfZoneId}/custom_hostnames?hostname=${domain}`,
+                {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${cfToken}`,
+                        'Content-Type': 'application/json',
+                    },
+                }
+            )
+            checkCfData = await checkCfResponse.json()
+            console.log("Cloudflare GET Search Response:", JSON.stringify(checkCfData, null, 2));
+        } catch (fetchErr) {
+            console.error("Cloudflare GET Fetch Error:", fetchErr);
+            throw new Error(`Failed to contact Cloudflare: ${fetchErr.message}`);
+        }
+
         let hostnameResult = null;
 
-        if (checkCfData.success && checkCfData.result.length > 0) {
+        if (checkCfData && checkCfData.success && Array.isArray(checkCfData.result) && checkCfData.result.length > 0) {
             // Already exists, use this one
             hostnameResult = checkCfData.result[0];
             console.log("Found existing hostname record");
         } else {
+            console.log("Hostname not found in search or search failed, attempting to create...");
             // Not found, create it
             const cfResponse = await fetch(
                 `https://api.cloudflare.com/client/v4/zones/${cfZoneId}/custom_hostnames`,
@@ -112,15 +123,22 @@ serve(async (req: Request) => {
             )
 
             const cfData = await cfResponse.json()
+            console.log("Cloudflare POST Response:", JSON.stringify(cfData, null, 2));
 
-            if (!cfData.success) {
-                console.error("Cloudflare Error:", cfData.errors)
-                return new Response(JSON.stringify({ error: cfData.errors[0]?.message || "Cloudflare Error" }), {
+            if (!cfData || !cfData.success) {
+                console.error("Cloudflare Error:", cfData?.errors)
+                return new Response(JSON.stringify({ error: cfData?.errors?.[0]?.message || "Cloudflare Error" }), {
                     status: 400,
                     headers: { ...corsHeaders, 'Content-Type': 'application/json' },
                 })
             }
             hostnameResult = cfData.result;
+        }
+
+        console.log("Cloudflare Result:", JSON.stringify(hostnameResult, null, 2));
+
+        if (!hostnameResult) {
+            throw new Error("Cloudflare returned no result");
         }
 
         // Ownership verification
@@ -130,14 +148,18 @@ serve(async (req: Request) => {
         const ownershipValue = ownership.value || '';
 
         // SSL verification
-        const sslRecords = hostnameResult.ssl?.validation_records || [];
+        const ssl = hostnameResult.ssl || {};
+        const sslRecords = ssl.validation_records || [];
         const sslName = sslRecords[0]?.txt_name || '';
         const sslValue = sslRecords[0]?.txt_value || '';
 
-        // 3. Insert into Supabase
+        console.log("Final Records to Save:", { ownershipName, ownershipValue, sslName, sslValue });
+
+        // 3. Upsert into Supabase
+        console.log("Upserting domain record...");
         const { error: dbError } = await supabaseClient
             .from('custom_domains')
-            .insert({
+            .upsert({
                 user_id: user.id,
                 domain: domain,
                 verification_token: ownershipValue,
@@ -146,29 +168,14 @@ serve(async (req: Request) => {
                 ownership_value: ownershipValue,
                 ssl_name: sslName,
                 ssl_value: sslValue,
-                verified: false
+                updated_at: new Date().toISOString()
+            }, {
+                onConflict: 'domain'
             })
 
         if (dbError) {
-            if (dbError.code === '23505') {
-                // Already in DB, update it instead
-                const { error: updateError } = await supabaseClient
-                    .from('custom_domains')
-                    .update({
-                        verification_token: ownershipValue,
-                        ownership_type: ownershipType,
-                        ownership_name: ownershipName,
-                        ownership_value: ownershipValue,
-                        ssl_name: sslName,
-                        ssl_value: sslValue,
-                        updated_at: new Date().toISOString()
-                    })
-                    .eq('domain', domain);
-
-                if (updateError) throw updateError;
-            } else {
-                throw dbError
-            }
+            console.error("Database Upsert Error:", dbError);
+            throw dbError
         }
 
         return new Response(JSON.stringify({
@@ -180,8 +187,12 @@ serve(async (req: Request) => {
         })
 
     } catch (error: any) {
-        console.error(error)
-        return new Response(JSON.stringify({ error: error.message }), {
+        console.error("Global Catch Error:", error)
+        return new Response(JSON.stringify({
+            error: error.message,
+            stack: error.stack,
+            details: error
+        }), {
             status: 500,
             headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         })
