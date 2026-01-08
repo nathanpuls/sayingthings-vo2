@@ -5,11 +5,6 @@ import { resolveUser } from '../lib/users';
 import VoiceClipsPlayer from '../components/VoiceClipsPlayer';
 import { Mic } from 'lucide-react';
 
-interface Segment {
-    name: string;
-    start: number;
-    end: number;
-}
 
 
 interface SiteSettings {
