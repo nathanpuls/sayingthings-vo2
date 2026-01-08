@@ -46,16 +46,16 @@ export default function AudioPlayer({
     const tracks = (isControlled ? propTracks : localTracks) || [];
     const currentTrackIndex = (isControlled ? propIndex : localIndex) || 0;
     const isPlaying = isControlled ? propIsPlaying : localIsPlaying;
-    const currentTime = isControlled ? propCurrentTime : 0;
-    const duration = isControlled ? propDuration : 0;
+    const currentTime = (isControlled ? propCurrentTime : 0) || 0;
+    const duration = (isControlled ? propDuration : 0) || 0;
 
     // For local audio handling (legacy support if not controlled)
     const audioRef = useRef<HTMLAudioElement>(null);
     const [localCurrentTime, setLocalCurrentTime] = useState(0);
     const [localDuration, setLocalDuration] = useState(0);
 
-    const effectiveCurrentTime = isControlled ? propCurrentTime : localCurrentTime;
-    const effectiveDuration = isControlled ? propDuration : localDuration;
+    const effectiveCurrentTime = (isControlled ? propCurrentTime : localCurrentTime) || 0;
+    const effectiveDuration = (isControlled ? propDuration : localDuration) || 0;
 
     useEffect(() => {
         if (isControlled || !uid) return;
@@ -168,10 +168,11 @@ export default function AudioPlayer({
                     {/* Clips Display */}
                     {currentTrack.segments && (currentTrack.segments as any[]).length > 0 && (
                         <div className="flex flex-wrap justify-center gap-1.5 mt-3 px-2">
-                            {(currentTrack.segments as any[]).map((clip, idx) => {
+                            {((currentTrack.segments as any[]) || []).map((clip, idx) => {
+                                const segments = (currentTrack.segments as any[]) || [];
                                 const isActive = (currentTime || effectiveCurrentTime) >= clip.startTime &&
-                                    (idx === (currentTrack.segments as any[]).length - 1 ||
-                                        (currentTime || effectiveCurrentTime) < (currentTrack.segments as any[])[idx + 1].startTime);
+                                    (idx === segments.length - 1 ||
+                                        (currentTime || effectiveCurrentTime) < segments[idx + 1].startTime);
                                 return (
                                     <button
                                         key={idx}

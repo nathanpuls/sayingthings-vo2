@@ -36,6 +36,7 @@ interface SiteContent {
   font: string;
   web3FormsKey: string;
   showContactForm: boolean;
+  favicon: string;
 }
 
 export default function Home() {
@@ -201,7 +202,8 @@ export default function Home() {
     hiddenSections: [],
     font: "Outfit",
     web3FormsKey: "",
-    showContactForm: true
+    showContactForm: true,
+    favicon: ""
   });
 
   useEffect(() => {

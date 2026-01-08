@@ -1663,7 +1663,7 @@ interface ClipModalProps {
     isOpen: boolean;
     demo: Demo | null;
     onClose: () => void;
-    showToast: (message: string, type: 'success' | 'error') => void;
+    showToast: (message: string, type?: 'success' | 'error') => void;
     waveformCache: Map<string, AudioBuffer>;
 }
 
@@ -1887,9 +1887,9 @@ function ClipModal({ isOpen, demo, onClose, showToast, waveformCache }: ClipModa
     const handleSave = async () => {
         setSaving(true);
         try {
-            const { error } = await supabase.from('demos').update({
+            const { error } = await (supabase.from('demos') as any).update({
                 segments: clips
-            } as any).eq('id', demo.id);
+            }).eq('id', demo.id);
 
             if (error) throw error;
             showToast("Clips saved successfully!");

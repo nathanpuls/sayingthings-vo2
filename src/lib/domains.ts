@@ -113,7 +113,7 @@ export async function addCustomDomain(domain: string): Promise<{ success: boolea
         const cleanDomain = domain.toLowerCase().trim().replace(/^https?:\/\//, '').replace(/\/$/, '');
 
         // Call the Edge Function to handle Cloudflare provisioning + DB insert
-        const { data, error } = await supabase.functions.invoke('add-domain', {
+        const { data, error: _error } = await supabase.functions.invoke('add-domain', {
             body: { domain: cleanDomain }
         });
 
