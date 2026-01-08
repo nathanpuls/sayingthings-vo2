@@ -1201,7 +1201,7 @@ export default function Admin() {
                                                 <FileUploader
                                                     onUploadComplete={(url) => setSiteContent({ ...siteContent, favicon: url })}
                                                     folder="favicons"
-                                                    accept="image/x-icon,image/png,image/svg+xml"
+                                                    accept="image/x-icon,image/png,image/svg+xml,image/jpeg,image/jpg"
                                                 />
                                             </div>
                                         </div>

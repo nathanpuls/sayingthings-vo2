@@ -583,7 +583,7 @@ export default function Home() {
         <div className="container mx-auto px-6 flex justify-between items-center relative">
           <div className="flex items-center gap-6">
             <a href="#" className="flex items-center gap-2 group z-10 relative">
-              <span className="text-2xl font-semibold bg-gradient-to-r from-[var(--theme-primary)] to-[var(--theme-primary)] bg-clip-text text-transparent group-hover:opacity-80 transition">
+              <span className="text-2xl font-semibold text-slate-900 group-hover:text-[var(--theme-primary)] transition-colors">
                 {siteContent.siteName}
               </span>
             </a>
@@ -650,10 +650,8 @@ export default function Home() {
                 <section key="demos" id="demos" className={`${basePadding} px-6 relative overflow-hidden scroll-mt-28`}>
                   <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-indigo-100 via-slate-50 to-slate-50 -z-10" />
                   <FadeInSection className="container mx-auto max-w-4xl text-center mb-12">
-                    <h1 className="text-5xl md:text-7xl font-bold mb-6 tracking-tight text-slate-900">
-                      {siteContent.heroTitle.split(' ').map((word, i) => (
-                        <span key={i}>{i === 1 ? <span className="text-[var(--theme-primary)]">{word}</span> : word}{' '}</span>
-                      ))}
+                    <h1 className="text-5xl md:text-7xl font-bold mb-6 tracking-tight text-[var(--theme-primary)]">
+                      {siteContent.heroTitle}
                     </h1>
                     <p className="text-xl text-slate-500 mb-12 max-w-2xl mx-auto">
                       {siteContent.heroSubtitle}
