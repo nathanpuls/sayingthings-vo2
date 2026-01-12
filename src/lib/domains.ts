@@ -11,7 +11,7 @@ export async function getUserIdFromDomain(): Promise<string | null> {
     ];
 
     // If on main domain, return null (will use URL-based routing)
-    if (mainDomains.some(domain => hostname.includes(domain))) {
+    if (mainDomains.includes(hostname)) {
         return null;
     }
 
@@ -58,7 +58,7 @@ export function isCustomDomain(): boolean {
         'www.built.at',
     ];
 
-    return !mainDomains.some(domain => hostname.includes(domain));
+    return !mainDomains.includes(hostname);
 }
 
 export function generateVerificationToken(): string {
