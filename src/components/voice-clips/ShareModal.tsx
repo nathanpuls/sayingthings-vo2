@@ -6,9 +6,13 @@ interface ShareModalProps {
     isOpen: boolean;
     onClose: () => void;
     themeColor: string;
+    shareConfig?: {
+        publicUrl: string;
+        embedUrl: string;
+    };
 }
 
-export default function ShareModal({ isOpen, onClose, themeColor }: ShareModalProps) {
+export default function ShareModal({ isOpen, onClose, themeColor, shareConfig }: ShareModalProps) {
     const [copiedId, setCopiedId] = useState<string | null>(null);
 
     const copyToClipboard = (text: string, id: string) => {
@@ -62,13 +66,13 @@ export default function ShareModal({ isOpen, onClose, themeColor }: ShareModalPr
                                     <input
                                         type="text"
                                         readOnly
-                                        value={window.location.href}
+                                        value={shareConfig?.publicUrl || window.location.href}
                                         onClick={(e) => (e.target as HTMLInputElement).select()}
                                         className="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs text-slate-500 outline-none focus:border-[var(--theme-color)] transition-colors font-medium"
                                         style={{ borderColor: copiedId === 'url' ? 'var(--theme-color)' : undefined }}
                                     />
                                     <button
-                                        onClick={() => copyToClipboard(window.location.href, 'url')}
+                                        onClick={() => copyToClipboard(shareConfig?.publicUrl || window.location.href, 'url')}
                                         className={`w-12 rounded-xl transition-all flex items-center justify-center flex-shrink-0 ${copiedId === 'url' ? 'bg-green-500 text-white shadow-green-200' : 'bg-[var(--theme-color)] text-white hover:opacity-90 shadow-sm'} shadow-md`}
                                         title="Copy link"
                                         style={{ backgroundColor: copiedId === 'url' ? undefined : themeColor }}
@@ -86,13 +90,13 @@ export default function ShareModal({ isOpen, onClose, themeColor }: ShareModalPr
                                     <textarea
                                         readOnly
                                         rows={2}
-                                        value={`<iframe src="${window.location.href}" width="100%" height="600" frameborder="0" allow="autoplay" style="border-radius: 1rem;"></iframe>`}
+                                        value={`<iframe src="${shareConfig?.embedUrl || window.location.href}" width="100%" height="600" frameborder="0" allow="autoplay" style="border-radius: 1rem;"></iframe>`}
                                         onClick={(e) => (e.target as HTMLTextAreaElement).select()}
                                         className="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-[10px] text-slate-500 outline-none resize-none font-mono leading-relaxed focus:border-[var(--theme-color)] transition-colors"
                                         style={{ borderColor: copiedId === 'embed' ? 'var(--theme-color)' : undefined }}
                                     />
                                     <button
-                                        onClick={() => copyToClipboard(`<iframe src="${window.location.href}" width="100%" height="600" frameborder="0" allow="autoplay" style="border-radius: 1rem;"></iframe>`, 'embed')}
+                                        onClick={() => copyToClipboard(`<iframe src="${shareConfig?.embedUrl || window.location.href}" width="100%" height="600" frameborder="0" allow="autoplay" style="border-radius: 1rem;"></iframe>`, 'embed')}
                                         className={`w-12 rounded-xl transition-all flex items-center justify-center flex-shrink-0 self-stretch ${copiedId === 'embed' ? 'bg-green-500 text-white shadow-green-200' : 'bg-[var(--theme-color)] text-white hover:opacity-90 shadow-sm'} shadow-md`}
                                         title="Copy embed code"
                                         style={{ backgroundColor: copiedId === 'embed' ? undefined : themeColor }}

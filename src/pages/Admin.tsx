@@ -54,6 +54,9 @@ interface SiteContentState {
     showContactForm: boolean;
     favicon: string;
     username: string;
+    favicon: string;
+    username: string;
+    playerStyle: string;
 }
 
 // const authorizedEmail = "natepuls@gmail.com";
@@ -126,7 +129,10 @@ export default function Admin() {
         font: "Outfit",
         web3FormsKey: "",
         showContactForm: true,
-        favicon: ""
+        favicon: "",
+        favicon: "",
+        username: "",
+        playerStyle: "default"
     });
 
 
@@ -259,7 +265,10 @@ export default function Admin() {
                 showContactForm: settings.show_contact_form !== false,
                 hiddenSections: (settings.hidden_sections as any) || [],
                 favicon: settings.favicon || "",
-                username: settings.username || ""
+                username: settings.username || "",
+                playerStyle: settings.player_style || "default",
+                showHeroTitle: settings.show_hero_title !== false,
+                showHeroSubtitle: settings.show_hero_subtitle !== false
             });
             if (settings.font) applyFont(settings.font);
         }
@@ -543,7 +552,10 @@ export default function Admin() {
                 show_contact_form: siteContent.showContactForm,
                 hidden_sections: siteContent.hiddenSections,
                 favicon: siteContent.favicon,
-                username: siteContent.username || null
+                username: siteContent.username || null,
+                player_style: siteContent.playerStyle,
+                show_hero_title: siteContent.showHeroTitle,
+                show_hero_subtitle: siteContent.showHeroSubtitle
             };
 
             const { error } = await (supabase.from('site_settings' as any) as any).upsert(payload, { onConflict: 'user_id' });
@@ -678,8 +690,7 @@ export default function Admin() {
             {/* Sidebar */}
             <aside className="w-20 md:w-64 bg-white border-r border-slate-200 flex flex-col fixed h-full shadow-sm z-[50]">
                 <div className="p-4 md:p-6 border-b border-slate-100 flex items-center justify-center md:justify-start gap-3">
-                    <div className="px-3 h-8 rounded-lg flex items-center justify-center text-white font-bold italic shadow-lg shadow-black/5 bg-[var(--theme-primary)]">B</div>
-                    <span className="font-bold text-slate-800 tracking-tight text-lg hidden md:block">Admin</span>
+                    <span className="font-bold text-slate-800 tracking-tight text-lg">Admin</span>
                 </div>
 
                 <nav className="flex-1 p-2 md:p-4 space-y-1">
@@ -703,7 +714,7 @@ export default function Admin() {
                     <p className="text-[10px] text-slate-400 px-4 mb-2 truncate font-medium hidden md:block" title={user?.email}>
                         Signed in as: {user?.email}
                     </p>
-                    <Link to={user ? (siteContent.username ? `/u/${siteContent.username}` : `/u/${user.id}`) : "/"} className="flex items-center justify-center md:justify-start gap-3 px-3 py-3 md:px-4 md:py-3 text-sm font-medium text-slate-500 hover:text-[var(--theme-primary)] transition-colors mb-2" title="View Site">
+                    <Link to="/" className="flex items-center justify-center md:justify-start gap-3 px-3 py-3 md:px-4 md:py-3 text-sm font-medium text-slate-500 hover:text-[var(--theme-primary)] transition-colors mb-2" title="View Site">
                         <Home size={18} /> <span className="hidden md:block">View Site</span>
                     </Link>
                     <button onClick={logout} className="w-full flex items-center justify-center md:justify-start gap-3 px-3 py-3 md:px-4 md:py-3 text-sm font-medium text-red-500 hover:bg-red-50 rounded-xl transition-all" title="Sign Out">
@@ -732,6 +743,7 @@ export default function Admin() {
                                 </div>
                                 <button type="submit" disabled={uploading || !newDemo.name || !newDemo.url} className="text-white py-3 px-6 rounded-xl font-semibold transition-all disabled:opacity-50 bg-[var(--theme-primary)] hover:opacity-90 shadow-lg shadow-[var(--theme-primary)]/30">Add Demo</button>
                             </form>
+
                             <ItemList items={demos} collName="demos" onReorder={(newItems) => handleReorder("demos", newItems)} onDelete={deleteItem} editingId={editingId} setEditingId={setEditingId} editForm={editForm} setEditForm={setEditForm} onSave={updateItem} onCancel={() => setEditingId(null)} fields={[{ key: 'name', label: 'Name' }, { key: 'url', label: 'Audio URL' }]}
                                 extraActions={(item) => (
                                     <button
@@ -743,6 +755,7 @@ export default function Admin() {
                                     </button>
                                 )}
                             />
+
                         </div>
                     )}
 
@@ -1121,35 +1134,49 @@ export default function Admin() {
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
                                     <Section title="Hero Section" icon={<Settings size={18} />}>
                                         <div className="space-y-6">
-                                            <div className="bg-slate-50 p-4 rounded-xl border border-slate-200">
-                                                <div className="flex items-center justify-between mb-2">
-                                                    <label className="text-xs font-bold text-slate-700 uppercase tracking-wide">Username / URL</label>
-                                                    <a href={`https://built.at/u/${siteContent.username || user?.id}`} target="_blank" rel="noreferrer" className="text-[10px] text-[var(--theme-primary)] hover:underline flex items-center gap-1">
-                                                        <Globe size={10} />
-                                                        View Live
-                                                    </a>
-                                                </div>
-                                                <div className="flex items-center gap-2">
-                                                    <span className="text-sm text-slate-400 font-mono">built.at/u/</span>
-                                                    <input
-                                                        type="text"
-                                                        value={siteContent.username}
-                                                        onChange={(e) => {
-                                                            const val = e.target.value.toLowerCase().replace(/[^a-z0-9-_]/g, '');
-                                                            setSiteContent({ ...siteContent, username: val });
-                                                        }}
-                                                        placeholder="username"
-                                                        className="flex-1 bg-white px-3 py-2 rounded-lg border border-slate-300 text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-[var(--theme-primary)]/20 focus:border-[var(--theme-primary)] placeholder:text-slate-300"
-                                                    />
-                                                </div>
-                                                <p className="text-[10px] text-slate-400 mt-2">
-                                                    This will be your public profile URL: <b>built.at/u/{siteContent.username || 'username'}</b>
-                                                </p>
-                                            </div>
 
                                             <Field label="Site Name" value={siteContent.siteName} onChange={v => setSiteContent({ ...siteContent, siteName: v })} />
-                                            <Field label="Hero Title" value={siteContent.heroTitle} onChange={v => setSiteContent({ ...siteContent, heroTitle: v })} />
-                                            <Field label="Hero Subtitle" value={siteContent.heroSubtitle} onChange={v => setSiteContent({ ...siteContent, heroSubtitle: v })} />
+                                            <div>
+                                                <label className="text-[11px] font-bold text-slate-400 uppercase tracking-widest block mb-1">Hero Title</label>
+                                                <div className="flex gap-2">
+                                                    <input
+                                                        type="text"
+                                                        value={siteContent.heroTitle || ""}
+                                                        onChange={(e) => setSiteContent({ ...siteContent, heroTitle: e.target.value })}
+                                                        className="flex-1 h-11 px-3 rounded-lg border border-slate-200 outline-none focus:ring-2 focus:ring-[var(--theme-primary)]/20 focus:border-[var(--theme-primary)] transition-all font-medium text-slate-700 bg-slate-50 placeholder:text-slate-300"
+                                                        placeholder="e.g. Saying Things"
+                                                    />
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setSiteContent({ ...siteContent, showHeroTitle: !(siteContent.showHeroTitle !== false) })}
+                                                        className={`w-11 h-11 flex items-center justify-center rounded-lg border border-slate-200 transition-colors ${siteContent.showHeroTitle !== false ? 'text-slate-400 hover:text-slate-600 hover:bg-slate-50' : 'bg-slate-100 text-slate-400'}`}
+                                                        title={siteContent.showHeroTitle !== false ? "Hide Title" : "Show Title"}
+                                                    >
+                                                        {siteContent.showHeroTitle !== false ? <Eye size={20} /> : <EyeOff size={20} />}
+                                                    </button>
+                                                </div>
+                                            </div>
+
+                                            <div>
+                                                <label className="text-[11px] font-bold text-slate-400 uppercase tracking-widest block mb-1">Hero Subtitle</label>
+                                                <div className="flex gap-2">
+                                                    <input
+                                                        type="text"
+                                                        value={siteContent.heroSubtitle || ""}
+                                                        onChange={(e) => setSiteContent({ ...siteContent, heroSubtitle: e.target.value })}
+                                                        className="flex-1 h-11 px-3 rounded-lg border border-slate-200 outline-none focus:ring-2 focus:ring-[var(--theme-primary)]/20 focus:border-[var(--theme-primary)] transition-all font-medium text-slate-700 bg-slate-50 placeholder:text-slate-300"
+                                                        placeholder="e.g. Bring your script to life"
+                                                    />
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setSiteContent({ ...siteContent, showHeroSubtitle: !(siteContent.showHeroSubtitle !== false) })}
+                                                        className={`w-11 h-11 flex items-center justify-center rounded-lg border border-slate-200 transition-colors ${siteContent.showHeroSubtitle !== false ? 'text-slate-400 hover:text-slate-600 hover:bg-slate-50' : 'bg-slate-100 text-slate-400'}`}
+                                                        title={siteContent.showHeroSubtitle !== false ? "Hide Subtitle" : "Show Subtitle"}
+                                                    >
+                                                        {siteContent.showHeroSubtitle !== false ? <Eye size={20} /> : <EyeOff size={20} />}
+                                                    </button>
+                                                </div>
+                                            </div>
                                         </div>
                                     </Section>
                                     <Section title="Layout Order" icon={<Share2 size={18} />}>
@@ -1224,6 +1251,8 @@ export default function Admin() {
                                                     ))}
                                                 </div>
                                             </div>
+
+
 
                                             <div className="space-y-4 pt-4 border-t border-slate-50">
                                                 <div className="flex items-center justify-between">

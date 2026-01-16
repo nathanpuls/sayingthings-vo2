@@ -19,70 +19,101 @@ interface Track {
 interface VoiceClipsPlayerProps {
     tracks: Track[];
     themeColor?: string;
+    shareConfig?: { // Optional config for share links
+        publicUrl: string;
+        embedUrl: string;
+    };
 }
 
-export default function VoiceClipsPlayer({ tracks, themeColor = '#6366f1' }: VoiceClipsPlayerProps) {
-    // Helper functions for URL-friendly track names
-    const trackNameToSlug = (name: string) => {
-        return name.toLowerCase().replace(/\s+/g, '-');
-    };
-
-    const slugToTrackName = (slug: string) => {
-        return slug.replace(/-/g, ' ');
-    };
-
-    // Get initial track from URL parameter or default to first track
-    const getInitialTrack = () => {
-        const params = new URLSearchParams(window.location.search);
-        const trackParam = params.get('track');
-        if (trackParam) {
-            const normalizedParam = slugToTrackName(trackParam);
-            const track = tracks.find(t => t.name.toLowerCase() === normalizedParam.toLowerCase());
-            if (track) return track;
-        }
-        return tracks[0] || null;
-    };
-
-    const [selectedTrack, setSelectedTrack] = useState<Track | null>(getInitialTrack());
+export default function VoiceClipsPlayer({ tracks, themeColor = '#6366f1', shareConfig }: VoiceClipsPlayerProps) {
+    const [selectedTrack, setSelectedTrack] = useState<Track | null>(tracks.length > 0 ? tracks[0] : null);
     const [currentClipIndex, setCurrentClipIndex] = useState<number | null>(null);
     const [isPlaying, setIsPlaying] = useState(false);
     const [currentTime, setCurrentTime] = useState(0);
     const [dropdownOpen, setDropdownOpen] = useState(false);
     const [showShareModal, setShowShareModal] = useState(false);
+
+    // Derived state for immediate rendering to prevent flash
+    const rawActiveTrack = selectedTrack;
+
+    // Ensure there is always at least one clip (the full track) so UI doesn't break
+    const activeTrack = rawActiveTrack ? {
+        ...rawActiveTrack,
+        clips: (rawActiveTrack.clips && rawActiveTrack.clips.length > 0)
+            ? rawActiveTrack.clips
+            : [{ name: rawActiveTrack.name, start: 0, end: 999999 }]
+    } : null;
+
     const audioRef = useRef<HTMLAudioElement>(null);
+    const dropdownRef = useRef<HTMLDivElement>(null);
 
-    // Update URL when track changes
+    // Close dropdown when clicking outside
     useEffect(() => {
-        if (selectedTrack) {
-            const params = new URLSearchParams(window.location.search);
-            params.set('track', trackNameToSlug(selectedTrack.name));
-            const newUrl = `${window.location.pathname}?${params.toString()}`;
-            window.history.replaceState({}, '', newUrl);
+        const handleClickOutside = (event: MouseEvent) => {
+            if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+                setDropdownOpen(false);
+            }
+        };
+
+        if (dropdownOpen) {
+            document.addEventListener('mousedown', handleClickOutside);
         }
-    }, [selectedTrack]);
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
+        };
+    }, [dropdownOpen]);
 
-    // Load track when selected and auto-play
+    // Auto-select track when tracks load
     useEffect(() => {
-        if (selectedTrack && audioRef.current && selectedTrack.clips.length > 0) {
-            const audio = audioRef.current;
-            console.log('Loading track:', selectedTrack.name, 'URL:', selectedTrack.url);
-            audio.src = selectedTrack.url;
+        if (!selectedTrack && tracks.length > 0) {
+            setSelectedTrack(tracks[0]);
+        }
+    }, [tracks]);
 
-            // Auto-play first clip after loading
+    // Track first load to prevent autoplay
+    const hasLoadedRef = useRef(false);
+
+    // Load track when selected
+    useEffect(() => {
+        if (activeTrack && audioRef.current && activeTrack.clips.length > 0) {
+            const audio = audioRef.current;
+
+            // Avoid reloading if it's the same track ID and we are already setup
+            // This handles the reference instability of props passed from parent
+            const currentSrc = audio.getAttribute('data-track-id');
+            if (currentSrc === activeTrack.id) {
+                return;
+            }
+
+            console.log('Loading track:', activeTrack.name, 'URL:', activeTrack.url);
+            audio.src = activeTrack.url;
+            audio.setAttribute('data-track-id', activeTrack.id);
+
+            // Auto-play behavior
             audio.onloadedmetadata = () => {
-                const firstClip = selectedTrack.clips[0];
+                const firstClip = activeTrack.clips[0];
                 console.log('Audio loaded, starting clip:', firstClip.name, 'at', firstClip.start);
                 setCurrentClipIndex(0);
                 audio.currentTime = firstClip.start;
-                audio.play().then(() => {
-                    console.log('Playback started');
-                    setIsPlaying(true);
-                }).catch(err => {
-                    console.log('Auto-play prevented:', err);
-                });
+
+                // Only autoplay if it's NOT the first load of the component
+                // OR if the user deliberately selected this track (we can assume selectedTrack implies intent if we set hasLoadedRef)
+
+                if (hasLoadedRef.current) {
+                    audio.play().then(() => {
+                        console.log('Playback started');
+                        setIsPlaying(true);
+                    }).catch(err => {
+                        console.log('Auto-play prevented:', err);
+                    });
+                } else {
+                    // First load - do not play, just prep
+                    hasLoadedRef.current = true;
+                    setIsPlaying(false);
+                }
             };
         }
-    }, [selectedTrack]);
+    }, [activeTrack?.id]); // Only trigger when ID changes, not object reference
 
     // Spacebar to play/pause
     useEffect(() => {
@@ -92,7 +123,7 @@ export default function VoiceClipsPlayer({ tracks, themeColor = '#6366f1' }: Voi
                 e.preventDefault(); // Prevent page scroll
 
                 const audio = audioRef.current;
-                if (!audio || !selectedTrack || selectedTrack.clips.length === 0) return;
+                if (!audio || !activeTrack || activeTrack.clips.length === 0) return;
 
                 if (isPlaying) {
                     audio.pause();
@@ -101,7 +132,7 @@ export default function VoiceClipsPlayer({ tracks, themeColor = '#6366f1' }: Voi
                     // If no clip is selected, start from the first one
                     if (currentClipIndex === null) {
                         setCurrentClipIndex(0);
-                        audio.currentTime = selectedTrack.clips[0].start;
+                        audio.currentTime = activeTrack.clips[0].start;
                     }
                     audio.play();
                     setIsPlaying(true);
@@ -111,13 +142,13 @@ export default function VoiceClipsPlayer({ tracks, themeColor = '#6366f1' }: Voi
 
         window.addEventListener('keydown', handleKeyPress);
         return () => window.removeEventListener('keydown', handleKeyPress);
-    }, [isPlaying, currentClipIndex, selectedTrack]);
+    }, [isPlaying, currentClipIndex, activeTrack]);
 
     const playClip = (index: number) => {
         const audio = audioRef.current;
-        if (!audio || !selectedTrack) return;
+        if (!audio || !activeTrack) return;
 
-        const clip = selectedTrack.clips[index];
+        const clip = activeTrack.clips[index];
 
         // If clicking the currently playing clip, pause it
         if (currentClipIndex === index && isPlaying) {
@@ -151,8 +182,8 @@ export default function VoiceClipsPlayer({ tracks, themeColor = '#6366f1' }: Voi
 
         const updateProgress = () => {
             const audio = audioRef.current;
-            if (audio && currentClipIndex !== null && selectedTrack && isPlaying) {
-                const clip = selectedTrack.clips[currentClipIndex];
+            if (audio && currentClipIndex !== null && activeTrack && isPlaying) {
+                const clip = activeTrack.clips[currentClipIndex];
                 setCurrentTime(audio.currentTime);
 
                 // Auto-advance to next clip when current one ends
@@ -162,8 +193,8 @@ export default function VoiceClipsPlayer({ tracks, themeColor = '#6366f1' }: Voi
                     : clip.end;
 
                 if (audio.currentTime >= effectiveEnd - 0.2 || audio.ended) {
-                    if (currentClipIndex < selectedTrack.clips.length - 1) {
-                        const nextClip = selectedTrack.clips[currentClipIndex + 1];
+                    if (currentClipIndex < activeTrack.clips.length - 1) {
+                        const nextClip = activeTrack.clips[currentClipIndex + 1];
                         setCurrentClipIndex(currentClipIndex + 1);
                         audio.currentTime = nextClip.start;
                     } else {
@@ -187,11 +218,37 @@ export default function VoiceClipsPlayer({ tracks, themeColor = '#6366f1' }: Voi
                 cancelAnimationFrame(animationFrameId);
             }
         };
-    }, [isPlaying, currentClipIndex, selectedTrack]);
+    }, [isPlaying, currentClipIndex, activeTrack]);
+
+    // Skeleton loading state if no tracks available yet
+    if (tracks.length === 0) {
+        return (
+            <div className="relative w-full max-w-[380px] mx-auto bg-white rounded-2xl shadow-lg border border-slate-200 overflow-hidden">
+                <div className="p-4 space-y-3 animate-pulse">
+                    {/* Fake Dropdown */}
+                    <div className="h-[46px] bg-slate-100 rounded-xl w-full" />
+
+                    {/* Fake Controls */}
+                    <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 bg-slate-100 rounded-full" />
+                        <div className="w-10 h-10 bg-slate-200 rounded-full" />
+                        <div className="w-10 h-10 bg-slate-100 rounded-full" />
+                    </div>
+
+                    {/* Fake List */}
+                    <div className="space-y-2 pt-2">
+                        {[1, 2, 3, 4].map(i => (
+                            <div key={i} className="h-10 bg-slate-50 rounded-lg w-full" />
+                        ))}
+                    </div>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div
-            className="relative w-full max-w-[380px] mx-auto bg-white rounded-2xl shadow-lg overflow-hidden border border-slate-200"
+            className="relative w-full max-w-[380px] mx-auto bg-white rounded-2xl shadow-lg border border-slate-200"
             style={{ '--theme-color': themeColor } as React.CSSProperties}
         >
             <style>{`
@@ -204,21 +261,21 @@ export default function VoiceClipsPlayer({ tracks, themeColor = '#6366f1' }: Voi
             `}</style>
             <audio ref={audioRef} />
 
-            <div className="p-5 space-y-4">
+            <div className="p-4 space-y-3">
                 {/* Track Selector Dropdown */}
-                <div className="relative">
+                <div className="relative" ref={dropdownRef}>
                     <button
                         onClick={() => setDropdownOpen(!dropdownOpen)}
                         className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-between hover:bg-slate-100 transition-colors"
                     >
                         <span className="font-semibold text-slate-900">
-                            {selectedTrack?.name || 'Select a track'}
+                            {activeTrack?.name || 'Select a track'}
                         </span>
                         <ChevronDown size={20} className={`text-slate-400 transition-transform ${dropdownOpen ? 'rotate-180' : ''}`} />
                     </button>
 
                     {dropdownOpen && (
-                        <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-slate-200 rounded-xl shadow-lg z-10 max-h-64 overflow-y-auto">
+                        <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-slate-200 rounded-xl shadow-lg z-50 max-h-64 overflow-y-auto">
                             {tracks.map((track) => (
                                 <button
                                     key={track.id}
@@ -226,13 +283,10 @@ export default function VoiceClipsPlayer({ tracks, themeColor = '#6366f1' }: Voi
                                         setSelectedTrack(track);
                                         setDropdownOpen(false);
                                     }}
-                                    className={`w-full px-4 py-3 text-left hover:bg-slate-50 transition-colors ${selectedTrack?.id === track.id ? 'bg-[var(--theme-color)]/10 text-[var(--theme-color)] font-semibold' : 'text-slate-700'
+                                    className={`w-full px-4 py-3 text-left hover:bg-slate-50 transition-colors ${activeTrack?.id === track.id ? 'bg-[var(--theme-color)]/10 text-[var(--theme-color)] font-semibold' : 'text-slate-700'
                                         }`}
                                 >
                                     {track.name}
-                                    <span className="text-xs text-slate-400 ml-2">
-                                        ({track.clips.length} clips)
-                                    </span>
                                 </button>
                             ))}
                         </div>
@@ -240,7 +294,7 @@ export default function VoiceClipsPlayer({ tracks, themeColor = '#6366f1' }: Voi
                 </div>
 
                 {/* Playback Controls */}
-                {selectedTrack && selectedTrack.clips.length > 0 && (
+                {activeTrack && activeTrack.clips.length > 0 && (
                     <div className="flex items-center justify-start gap-3">
                         <button
                             onClick={() => {
@@ -260,7 +314,7 @@ export default function VoiceClipsPlayer({ tracks, themeColor = '#6366f1' }: Voi
                             onClick={() => {
                                 if (currentClipIndex !== null) {
                                     playClip(currentClipIndex);
-                                } else if (selectedTrack.clips.length > 0) {
+                                } else if (activeTrack.clips.length > 0) {
                                     playClip(0);
                                 }
                             }}
@@ -275,11 +329,11 @@ export default function VoiceClipsPlayer({ tracks, themeColor = '#6366f1' }: Voi
 
                         <button
                             onClick={() => {
-                                if (currentClipIndex !== null && selectedTrack && currentClipIndex < selectedTrack.clips.length - 1) {
+                                if (currentClipIndex !== null && activeTrack && currentClipIndex < activeTrack.clips.length - 1) {
                                     playClip(currentClipIndex + 1);
                                 }
                             }}
-                            disabled={currentClipIndex === null || (selectedTrack && currentClipIndex === selectedTrack.clips.length - 1)}
+                            disabled={currentClipIndex === null || (activeTrack && currentClipIndex === activeTrack.clips.length - 1)}
                             className="w-10 h-10 rounded-full bg-slate-100 text-slate-600 flex items-center justify-center hover:bg-slate-200 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
                         >
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
@@ -290,10 +344,10 @@ export default function VoiceClipsPlayer({ tracks, themeColor = '#6366f1' }: Voi
                 )}
 
 
-                {/* Clips List with Full-Height Progress Bars */}
-                {selectedTrack && selectedTrack.clips.length > 0 && (
+                {/* Clips List */}
+                {activeTrack && activeTrack.clips.length > 0 && (
                     <ClipsList
-                        selectedTrack={selectedTrack}
+                        selectedTrack={activeTrack}
                         currentClipIndex={currentClipIndex}
                         isPlaying={isPlaying}
                         themeColor={themeColor}
@@ -303,44 +357,15 @@ export default function VoiceClipsPlayer({ tracks, themeColor = '#6366f1' }: Voi
                         setCurrentClipIndex={setCurrentClipIndex}
                     />
                 )}
-
-                {/* Footer and Notifications Area */}
-                <div className="relative pt-4 border-t border-slate-100">
-
-                    <div className="flex items-center justify-between">
-                        <a
-                            href="https://built.at"
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-[10px] font-bold tracking-widest uppercase text-slate-300 hover:text-slate-500 transition-colors"
-                        >
-                            Built.at
-                        </a>
-
-                        {selectedTrack && (
-                            <button
-                                onClick={() => setShowShareModal(true)}
-                                className="text-slate-300 hover:text-slate-500 transition-colors p-1"
-                                title="Share this track"
-                            >                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                                    <circle cx="18" cy="5" r="3" />
-                                    <circle cx="6" cy="12" r="3" />
-                                    <circle cx="18" cy="19" r="3" />
-                                    <line x1="8.59" y1="13.51" x2="15.42" y2="17.49" />
-                                    <line x1="15.41" y1="6.51" x2="8.59" y2="10.49" />
-                                </svg>
-                            </button>
-                        )}
-                    </div>
-                </div>
-            </div >
+            </div>
 
             {/* Share Modal */}
             <ShareModal
                 isOpen={showShareModal}
                 onClose={() => setShowShareModal(false)}
                 themeColor={themeColor}
+                shareConfig={shareConfig}
             />
-        </div >
+        </div>
     );
 }

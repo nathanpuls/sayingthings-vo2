@@ -39,6 +39,30 @@ export async function checkUsernameAvailability(username: string, currentUserId:
         .neq('user_id', currentUserId) // It's available if it's OURS
         .maybeSingle();
 
+
     if (error) return false;
     return !data; // If no data, it's available
+}
+
+export async function getSingleTenantUser(): Promise<string | null> {
+    try {
+        console.log('Single Tenant: Fetching first user from DB...');
+        const { data, error } = await supabase
+            .from('site_settings')
+            .select('user_id')
+            .limit(1)
+            .maybeSingle();
+
+        if (error) {
+            console.error('Single Tenant Error:', error);
+            return null;
+        }
+
+        const userId = (data as any)?.user_id || null;
+        console.log('Single Tenant: Found user ID:', userId);
+        return userId;
+    } catch (err) {
+        console.error('Error in getSingleTenantUser:', err);
+        return null;
+    }
 }

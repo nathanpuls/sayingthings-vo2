@@ -231,7 +231,10 @@ export interface Database {
                     hidden_sections: string[] | null
                     favicon: string | null
                     username: string | null
+                    player_style: string | null
                     created_at: string
+                    show_hero_title: boolean
+                    show_hero_subtitle: boolean
                 }
                 Insert: {
                     user_id: string
@@ -253,7 +256,11 @@ export interface Database {
                     show_contact_form?: boolean
                     hidden_sections?: string[] | null
                     favicon?: string | null
+                    username?: string | null
+                    player_style?: string | null
                     created_at?: string
+                    show_hero_title?: boolean
+                    show_hero_subtitle?: boolean
                 }
                 Update: {
                     user_id?: string
@@ -275,7 +282,11 @@ export interface Database {
                     show_contact_form?: boolean
                     hidden_sections?: string[] | null
                     favicon?: string | null
+                    username?: string | null
+                    player_style?: string | null
                     created_at?: string
+                    show_hero_title?: boolean
+                    show_hero_subtitle?: boolean
                 }
             }
         }

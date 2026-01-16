@@ -15,9 +15,9 @@ export default function HomeNav({ isScrolled, siteName, navLinks, mobileMenuOpen
             className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${isScrolled ? "bg-white/80 backdrop-blur-md shadow-sm py-4 border-b border-slate-200" : "bg-transparent py-6"
                 }`}
         >
-            <div className="container mx-auto px-6 flex justify-between items-center relative">
+            <div className="w-full px-4 md:px-6 flex justify-between items-center relative">
                 <div className="flex items-center gap-6">
-                    <a href="#" className="flex items-center gap-2 group z-10 relative">
+                    <a href={window.location.pathname} className="flex items-center gap-2 group z-10 relative">
                         <span className="text-2xl font-semibold text-slate-900 group-hover:text-[var(--theme-primary)] transition-colors">
                             {siteName}
                         </span>

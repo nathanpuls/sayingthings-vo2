@@ -108,31 +108,31 @@ export default function ContactSection({ siteContent, uid, basePadding = "py-6 m
 
                 <div className="flex flex-col gap-12 items-center">
                     {/* Basic Contact Info Area */}
-                    <div className="flex flex-wrap justify-center gap-6 w-full">
+                    <div className="flex flex-col items-center gap-4 w-full">
                         <a
                             href={`mailto:${siteContent.contactEmail}`}
-                            className="flex items-center gap-4 px-8 py-5 rounded-2xl bg-white border border-slate-100 shadow-sm hover:shadow-md hover:border-[var(--theme-primary)]/30 transition-all group min-w-fit"
+                            className="flex items-center gap-4 px-8 py-5 rounded-2xl bg-white border border-slate-100 shadow-sm hover:shadow-md hover:border-[var(--theme-primary)]/30 transition-all group w-full max-w-2xl"
                         >
                             <div className="p-3 bg-slate-50 rounded-xl group-hover:text-[var(--theme-primary)] transition-colors">
                                 <Mail className="w-6 h-6" />
                             </div>
                             <div className="flex flex-col">
                                 <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Email</span>
-                                <span className="font-semibold text-slate-800 text-base md:text-lg break-all">{siteContent.contactEmail}</span>
+                                <span className="font-semibold text-slate-800 text-xs sm:text-sm md:text-lg whitespace-nowrap">{siteContent.contactEmail}</span>
                             </div>
                         </a>
 
                         {siteContent.contactPhone && (
                             <a
                                 href={`tel:${siteContent.contactPhone.replace(/[^0-9+]/g, '')}`}
-                                className="flex items-center gap-4 px-8 py-5 rounded-2xl bg-white border border-slate-100 shadow-sm hover:shadow-md hover:border-[var(--theme-primary)]/30 transition-all group min-w-fit"
+                                className="flex items-center gap-4 px-8 py-5 rounded-2xl bg-white border border-slate-100 shadow-sm hover:shadow-md hover:border-[var(--theme-primary)]/30 transition-all group w-full max-w-2xl"
                             >
                                 <div className="p-3 bg-slate-50 rounded-xl group-hover:text-[var(--theme-primary)] transition-colors">
                                     <Phone className="w-6 h-6" />
                                 </div>
                                 <div className="flex flex-col">
                                     <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Phone</span>
-                                    <span className="font-semibold text-slate-800 text-base md:text-lg">{siteContent.contactPhone}</span>
+                                    <span className="font-semibold text-slate-800 text-xs sm:text-sm md:text-lg whitespace-nowrap">{siteContent.contactPhone}</span>
                                 </div>
                             </a>
                         )}
@@ -144,7 +144,6 @@ export default function ContactSection({ siteContent, uid, basePadding = "py-6 m
 
                             <div className="relative z-10 text-center mb-10">
                                 <h3 className="text-3xl font-bold mb-3 text-slate-900">Send a Message</h3>
-                                <p className="text-slate-500">I'll get back to you as soon as possible.</p>
                             </div>
 
                             <form onSubmit={handleContactSubmit} className="relative z-10 space-y-4">

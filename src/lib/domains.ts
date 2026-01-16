@@ -8,6 +8,10 @@ export async function getUserIdFromDomain(): Promise<string | null> {
         'localhost',
         'built.at',
         'www.built.at',
+        'studio.sayingthings.com',
+        'www.studio.sayingthings.com',
+        'sayingthings.com',
+        'www.sayingthings.com',
     ];
 
     // If on main domain, return null (will use URL-based routing)

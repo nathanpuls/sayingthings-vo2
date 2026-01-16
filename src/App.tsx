@@ -9,7 +9,6 @@ export default function App() {
     <BrowserRouter>
       <Routes>
         <Route path="/" element={<Home />} />
-        <Route path="/u/:uid" element={<Home />} />
         <Route path="/embed/audioplayer/:uid" element={<EmbedPlayer />} />
         <Route path="/embed/voiceclips/:uid" element={<VoiceClipsEmbed />} />
         <Route path="/admin" element={<Admin />} />

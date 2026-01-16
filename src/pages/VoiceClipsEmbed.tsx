@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { resolveUser } from '../lib/users';
+import { normalizeClips } from '../lib/audio';
 import VoiceClipsPlayer from '../components/VoiceClipsPlayer';
 import { Mic } from 'lucide-react';
 
@@ -10,6 +11,7 @@ import { Mic } from 'lucide-react';
 interface SiteSettings {
     theme_color: string;
     site_name: string;
+    username?: string;
 }
 
 export default function VoiceClipsEmbed() {
@@ -42,7 +44,7 @@ export default function VoiceClipsEmbed() {
             // Fetch site settings
             const { data: settingsData } = await supabase
                 .from('site_settings')
-                .select('theme_color, site_name')
+                .select('theme_color, site_name, username')
                 .eq('user_id', resolvedId)
                 .single();
 
@@ -51,60 +53,17 @@ export default function VoiceClipsEmbed() {
             }
 
             if (demosData) {
-                // Transform demos into tracks with clips
-                const transformedTracks = demosData.map((demo: any) => {
-                    // Parse segments if it's a string, otherwise use as-is
-                    let segments: any[] = [];
-
-                    if (demo.segments) {
-                        if (typeof demo.segments === 'string') {
-                            try {
-                                segments = JSON.parse(demo.segments);
-                            } catch (e) {
-                                console.error('Failed to parse segments:', e);
-                            }
-                        } else if (Array.isArray(demo.segments)) {
-                            segments = demo.segments;
-                        }
-                    }
-
-                    console.log('Track:', demo.name, 'Clips:', segments);
-
-                    // Transform segments to clips with proper structure
-                    let clips;
-
-                    if (segments.length === 0) {
-                        // If no clips, create one clip that plays the entire track
-                        clips = [{
-                            name: demo.name,
-                            start: 0,
-                            end: 999999 // Very large number to play until end
-                        }];
-                    } else {
-                        clips = segments.map((seg: any, index: number) => {
-                            const startTime = Number(seg.startTime) || 0;
-                            // End time is the start of the next clip, or a large number for the last clip
-                            const endTime = index < segments.length - 1
-                                ? Number(segments[index + 1].startTime) || startTime + 10
-                                : startTime + 300; // Default 5 minutes for last clip
-
-                            return {
-                                name: seg.label || seg.name || 'Untitled Clip',
-                                start: startTime,
-                                end: endTime
-                            };
-                        });
-                    }
-
-                    console.log('Track:', demo.name, 'Final clips:', clips);
-
-                    return {
-                        id: demo.id,
+                // Transform demos into tracks with clips using shared helper
+                const transformedTracks = demosData.map((demo: any) => ({
+                    id: demo.id,
+                    name: demo.name,
+                    url: demo.url,
+                    clips: normalizeClips(demo.segments) || [{
                         name: demo.name,
-                        url: demo.url,
-                        clips: clips
-                    };
-                });
+                        start: 0,
+                        end: 999999 // Play until end
+                    }]
+                }));
 
                 console.log('Transformed tracks:', transformedTracks);
                 setTracks(transformedTracks);
@@ -141,6 +100,10 @@ export default function VoiceClipsEmbed() {
             <VoiceClipsPlayer
                 tracks={tracks}
                 themeColor={settings?.theme_color || '#6366f1'}
+                shareConfig={{
+                    publicUrl: `${window.location.origin}/u/${settings?.username || uid}`,
+                    embedUrl: window.location.href
+                }}
             />
         </div>
     );

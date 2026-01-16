@@ -1,10 +1,11 @@
-import { useState, useEffect, useRef } from "react";
+import { useRef, useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
+import { Lock } from "lucide-react";
 import { supabase } from "../lib/supabase";
 import { getUserIdFromDomain } from "../lib/domains";
-import { resolveUser } from "../lib/users";
+import { resolveUser, getSingleTenantUser } from "../lib/users";
 import { applyFont } from "../lib/fonts";
-import { getPlayableUrl } from "../lib/audio";
+import { getPlayableUrl, normalizeClips } from "../lib/audio";
 import { Database } from "../lib/database.types";
 
 import Landing from "../components/home/Landing";
@@ -17,6 +18,7 @@ import ReviewsSection from "../components/home/ReviewsSection";
 import AboutSection from "../components/home/AboutSection";
 import ContactSection from "../components/home/ContactSection";
 import MiniPlayer from "../components/home/MiniPlayer";
+import VoiceClipsPlayer from "../components/VoiceClipsPlayer";
 
 // Types
 type Demo = Database['public']['Tables']['demos']['Row'];
@@ -45,6 +47,12 @@ interface SiteContent {
   web3FormsKey: string;
   showContactForm: boolean;
   favicon: string;
+  playerStyle: string;
+  playerStyle: string;
+  username?: string;
+  ownerId?: string;
+  showHeroTitle: boolean;
+  showHeroSubtitle: boolean;
 }
 
 export default function Home() {
@@ -170,7 +178,12 @@ export default function Home() {
     font: "Outfit",
     web3FormsKey: "",
     showContactForm: true,
-    favicon: ""
+    favicon: "",
+    playerStyle: "default",
+    username: "",
+    ownerId: "",
+    showHeroTitle: true,
+    showHeroSubtitle: true
   });
 
   useEffect(() => {
@@ -188,15 +201,16 @@ export default function Home() {
       // Check if we're on a custom domain first
       let userId: string | null | undefined = null;
 
-      if (uid) {
-        // Resolve UID or Username
-        userId = await resolveUser(uid);
-      } else {
-        // Try to get user ID from custom domain
-        userId = await getUserIdFromDomain();
+      // Fetch the single tenant user directly
+      userId = await getSingleTenantUser();
+
+      // If we are on a legacy route with a username, redirect to clean home URL
+      // (This handles cases where the user navigates to /u/some-username or the * route matches a subpath)
+      const currentPath = window.location.pathname;
+      if (currentPath !== '/' && !currentPath.startsWith('/admin') && !currentPath.startsWith('/embed')) {
+        window.history.replaceState({}, '', '/');
       }
 
-      // If still no user ID, show the landing page for 'Built'
       if (!userId) {
         setShowLanding(true);
         setLoading(false);
@@ -231,7 +245,12 @@ export default function Home() {
           font: settings.font || "Outfit",
           web3FormsKey: settings.web3_forms_key || "",
           showContactForm: settings.show_contact_form !== false,
-          favicon: settings.favicon || ""
+          favicon: settings.favicon || "",
+          playerStyle: settings.player_style || "default",
+          username: settings.username || "",
+          ownerId: userId, // userId is available in the scope
+          showHeroTitle: settings.show_hero_title !== false,
+          showHeroSubtitle: settings.show_hero_subtitle !== false
         });
         if (settings.font) applyFont(settings.font);
       }
@@ -259,6 +278,17 @@ export default function Home() {
 
     return () => window.removeEventListener("scroll", handleScroll);
   }, [uid]);
+
+  // Apply Favicon
+  useEffect(() => {
+    if (siteContent.favicon) {
+      const link = document.querySelector("link[rel*='icon']") || document.createElement('link');
+      link.type = 'image/x-icon';
+      link.rel = 'shortcut icon';
+      (link as HTMLLinkElement).href = siteContent.favicon;
+      document.getElementsByTagName('head')[0].appendChild(link);
+    }
+  }, [siteContent.favicon]);
 
   // Handle Hash Scrolling
   useEffect(() => {
@@ -374,23 +404,34 @@ export default function Home() {
           switch (section) {
             case 'demos':
               return (
-                <DemosSection
-                  key="demos"
-                  siteContent={siteContent}
-                  demos={demos}
-                  currentAudioIndex={currentAudioIndex}
-                  isAudioPlaying={isAudioPlaying}
-                  onPlayPause={toggleAudioPlay}
-                  onNext={nextTrack}
-                  onPrev={prevTrack}
-                  onSeek={handleAudioSeek}
-                  currentTime={audioCurrentTime}
-                  duration={audioDuration}
-                  onTrackSelect={(i) => {
-                    setCurrentAudioIndex(i);
-                    setIsAudioPlaying(true);
-                  }}
-                />
+                <div key="demos" id="demos" className={basePadding}>
+                  <div className="container mx-auto px-4">
+                    {siteContent.showHeroTitle && siteContent.heroTitle && (
+                      <h2 className="text-3xl font-bold text-center mb-8">{siteContent.heroTitle}</h2>
+                    )}
+
+                    {/* Description / Subtitle */}
+                    {siteContent.showHeroSubtitle && siteContent.heroSubtitle && (
+                      <p className="text-lg text-slate-500 text-center mb-8 max-w-2xl mx-auto">
+                        {siteContent.heroSubtitle}
+                      </p>
+                    )}
+
+                    <VoiceClipsPlayer
+                      tracks={demos.map(demo => ({
+                        id: demo.id,
+                        name: demo.name,
+                        url: getPlayableUrl(demo.url),
+                        clips: normalizeClips(demo.segments)
+                      }))}
+                      themeColor={siteContent.themeColor}
+                      shareConfig={{
+                        publicUrl: window.location.href,
+                        embedUrl: `${window.location.origin}/embed/voiceclips/${siteContent.username || siteContent.ownerId}`
+                      }}
+                    />
+                  </div>
+                </div>
               );
             case 'projects':
               return (
@@ -452,7 +493,7 @@ export default function Home() {
         })}
 
       <MiniPlayer
-        showMiniPlayer={showMiniPlayer}
+        showMiniPlayer={false}
         currentAudioTrack={currentAudioTrack}
         activeVideo={activeVideo}
         isPlayingVideo={isPlayingVideo}
@@ -480,9 +521,11 @@ export default function Home() {
         }}
       />
 
-      <footer className="pt-2 pb-32 text-center text-slate-400 text-sm bg-slate-50 relative flex justify-center items-center">
-        <p><a href="https://built.at" className="hover:text-[var(--theme-primary)] text-slate-500 transition-colors font-semibold">Built.at</a></p>
-      </footer>
+      <div className="py-8 bg-slate-50 flex justify-center">
+        <a href="/admin" className="text-slate-300 hover:text-slate-400 transition-colors p-2">
+          <Lock size={16} />
+        </a>
+      </div>
     </div>
   );
 }
