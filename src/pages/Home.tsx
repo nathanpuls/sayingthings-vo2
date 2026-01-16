@@ -2,15 +2,13 @@ import { useRef, useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { Lock } from "lucide-react";
 import { supabase } from "../lib/supabase";
-import { getUserIdFromDomain } from "../lib/domains";
-import { resolveUser, getSingleTenantUser } from "../lib/users";
+import { getSingleTenantUser } from "../lib/users";
 import { applyFont } from "../lib/fonts";
 import { getPlayableUrl, normalizeClips } from "../lib/audio";
 import { Database } from "../lib/database.types";
 
 import Landing from "../components/home/Landing";
 import HomeNav from "../components/home/HomeNav";
-import DemosSection from "../components/home/DemosSection";
 import ProjectsSection from "../components/home/ProjectsSection";
 import StudioSection from "../components/home/StudioSection";
 import ClientsSection from "../components/home/ClientsSection";
@@ -48,7 +46,6 @@ interface SiteContent {
   showContactForm: boolean;
   favicon: string;
   playerStyle: string;
-  playerStyle: string;
   username?: string;
   ownerId?: string;
   showHeroTitle: boolean;
@@ -62,7 +59,6 @@ export default function Home() {
   const [currentUser, setCurrentUser] = useState<any>(null);
   // Scroll State
   const [isScrolled, setIsScrolled] = useState(false);
-  const [showMiniPlayer, setShowMiniPlayer] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
 
@@ -70,8 +66,6 @@ export default function Home() {
   const [demos, setDemos] = useState<Demo[]>([]);
   const [currentAudioIndex, setCurrentAudioIndex] = useState(0);
   const [isAudioPlaying, setIsAudioPlaying] = useState(false);
-  const [audioCurrentTime, setAudioCurrentTime] = useState(0);
-  const [audioDuration, setAudioDuration] = useState(0);
   const audioRef = useRef<HTMLAudioElement>(null);
 
   // Audio Handlers
@@ -92,13 +86,8 @@ export default function Home() {
 
   const toggleAudioPlay = () => setIsAudioPlaying(!isAudioPlaying);
 
-  const handleAudioTimeUpdate = () => {
-    if (audioRef.current) setAudioCurrentTime(audioRef.current.currentTime);
-  };
-
   const handleAudioLoadedMetadata = () => {
     if (audioRef.current) {
-      setAudioDuration(audioRef.current.duration);
       if (isAudioPlaying) audioRef.current.play().catch(() => setIsAudioPlaying(false));
     }
   };
@@ -107,19 +96,6 @@ export default function Home() {
     setCurrentAudioIndex(prev => (prev + 1) % demos.length);
   };
 
-  const handleAudioSeek = (time: number) => {
-    if (audioRef.current) {
-      audioRef.current.currentTime = time;
-      setAudioCurrentTime(time);
-      if (!isAudioPlaying) {
-        setIsAudioPlaying(true);
-        audioRef.current.play().catch(console.error);
-      }
-    }
-  };
-
-  const nextTrack = () => setCurrentAudioIndex(prev => (prev + 1) % demos.length);
-  const prevTrack = () => setCurrentAudioIndex(prev => (prev - 1 + demos.length) % demos.length);
 
   // Firestore Data States
   const [studioGear, setStudioGear] = useState<StudioGear[]>([]);
@@ -189,7 +165,6 @@ export default function Home() {
   useEffect(() => {
     const handleScroll = () => {
       setIsScrolled(window.scrollY > 50);
-      setShowMiniPlayer(window.scrollY > 500); // Only show after scrolling past demos
     };
     window.addEventListener("scroll", handleScroll);
 
@@ -282,11 +257,14 @@ export default function Home() {
   // Apply Favicon
   useEffect(() => {
     if (siteContent.favicon) {
-      const link = document.querySelector("link[rel*='icon']") || document.createElement('link');
+      let link = document.querySelector("link[rel*='icon']") as HTMLLinkElement | null;
+      if (!link) {
+        link = document.createElement('link');
+        document.getElementsByTagName('head')[0].appendChild(link);
+      }
       link.type = 'image/x-icon';
       link.rel = 'shortcut icon';
-      (link as HTMLLinkElement).href = siteContent.favicon;
-      document.getElementsByTagName('head')[0].appendChild(link);
+      link.href = siteContent.favicon;
     }
   }, [siteContent.favicon]);
 
@@ -377,7 +355,6 @@ export default function Home() {
       <audio
         ref={audioRef}
         src={currentAudioTrack ? getPlayableUrl(currentAudioTrack.url) : undefined}
-        onTimeUpdate={handleAudioTimeUpdate}
         onLoadedMetadata={handleAudioLoadedMetadata}
         onEnded={handleAudioEnded}
       />

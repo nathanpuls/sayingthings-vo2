@@ -54,9 +54,9 @@ interface SiteContentState {
     showContactForm: boolean;
     favicon: string;
     username: string;
-    favicon: string;
-    username: string;
     playerStyle: string;
+    showHeroTitle: boolean;
+    showHeroSubtitle: boolean;
 }
 
 // const authorizedEmail = "natepuls@gmail.com";
@@ -130,9 +130,9 @@ export default function Admin() {
         web3FormsKey: "",
         showContactForm: true,
         favicon: "",
-        favicon: "",
-        username: "",
-        playerStyle: "default"
+        playerStyle: "default",
+        showHeroTitle: true,
+        showHeroSubtitle: true
     });
 
 

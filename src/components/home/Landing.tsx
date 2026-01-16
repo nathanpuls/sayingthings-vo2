@@ -1,4 +1,4 @@
-import { Sparkles, ChevronRight, LogIn, Zap, Layout, Globe } from "lucide-react";
+import { Sparkles, ChevronRight } from "lucide-react";
 import FadeInSection from "../FadeInSection";
 
 interface LandingProps {
