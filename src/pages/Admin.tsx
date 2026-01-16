@@ -59,8 +59,7 @@ interface SiteContentState {
     showHeroSubtitle: boolean;
 }
 
-// const authorizedEmail = "natepuls@gmail.com";
-const authorizedEmail = ""; // Disabled for multi-user support
+const authorizedEmail = "natepuls@gmail.com";
 
 // Move FormInput/FileUploader/Toggle/SectionReorder/ItemList definitions later or type them inline if they are in this file.
 // Assuming they are defined at bottom of file. Need to update their signatures.
