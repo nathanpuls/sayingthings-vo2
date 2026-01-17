@@ -305,15 +305,15 @@ export default function Home() {
   // Update favicon
   useEffect(() => {
     if (!showLanding && siteContent.favicon) {
-      const link = document.querySelector("link[rel~='icon']") as HTMLLinkElement;
-      if (link) {
-        link.href = siteContent.favicon;
-      } else {
-        const newLink = document.createElement('link');
-        newLink.rel = 'icon';
-        newLink.href = siteContent.favicon;
-        document.head.appendChild(newLink);
-      }
+      // Remove existing favicon links to force refresh
+      const existingLinks = document.querySelectorAll("link[rel*='icon']");
+      existingLinks.forEach(link => link.remove());
+
+      // Create new link
+      const newLink = document.createElement('link');
+      newLink.rel = 'icon';
+      newLink.href = siteContent.favicon;
+      document.head.appendChild(newLink);
     }
   }, [showLanding, siteContent.favicon]);
 
@@ -344,7 +344,14 @@ export default function Home() {
     if (error) console.error("Login failed:", error.message);
   };
 
-  if (loading) return <div className="min-h-screen grid place-items-center bg-white"><div className="w-8 h-8 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin" /></div>;
+  if (loading) return (
+    <div className="min-h-screen grid place-items-center bg-white">
+      <div
+        className="w-12 h-12 border-4 border-t-transparent rounded-full animate-spin"
+        style={{ borderColor: '#418fe1', borderTopColor: 'transparent' }}
+      />
+    </div>
+  );
 
   if (showLanding) {
     return <Landing handleLogin={handleLogin} currentUser={currentUser} isScrolled={isScrolled} />
@@ -362,7 +369,7 @@ export default function Home() {
         :root {
           --theme-primary: ${siteContent.themeColor || '#6366f1'};
         }
-      `}</style>
+  `}</style>
 
       <HomeNav
         isScrolled={isScrolled}
@@ -404,7 +411,7 @@ export default function Home() {
                       themeColor={siteContent.themeColor}
                       shareConfig={{
                         publicUrl: window.location.href,
-                        embedUrl: `${window.location.origin}/embed/voiceclips/${siteContent.username || siteContent.ownerId}`
+                        embedUrl: `${window.location.origin} /embed/voiceclips / ${siteContent.username || siteContent.ownerId} `
                       }}
                     />
                   </div>

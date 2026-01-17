@@ -105,7 +105,8 @@ export default function ClipModal({ isOpen, demo, onClose, showToast, waveformCa
 
         ctx.clearRect(0, 0, width, height);
         ctx.beginPath();
-        ctx.strokeStyle = '#6366f1'; // Indigo 500
+        const themeColor = getComputedStyle(document.documentElement).getPropertyValue('--theme-primary').trim();
+        ctx.strokeStyle = themeColor || '#6366f1';
         ctx.lineWidth = 1;
 
         for (let i = 0; i < width; i++) {

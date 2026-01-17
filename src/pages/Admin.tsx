@@ -202,6 +202,19 @@ export default function Admin() {
         }
     }, [newVideo.youtubeId]);
 
+    // Live Favicon Update
+    useEffect(() => {
+        if (siteContent.favicon) {
+            const existingLinks = document.querySelectorAll("link[rel*='icon']");
+            existingLinks.forEach(link => link.remove());
+
+            const newLink = document.createElement('link');
+            newLink.rel = 'icon';
+            newLink.href = siteContent.favicon;
+            document.head.appendChild(newLink);
+        }
+    }, [siteContent.favicon]);
+
     // Check Auth Session
     useEffect(() => {
         // Get initial session
@@ -210,6 +223,8 @@ export default function Admin() {
             setUser(currentUser);
             if (!currentUser) {
                 setLoading(false);
+                // Auto-trigger login if not authenticated
+                handleLogin();
             }
         });
 
@@ -274,6 +289,7 @@ export default function Admin() {
 
         // Now that settings are loaded, we can show the UI shell
         setLoading(false);
+        // ... (rest of fetchData)
 
         // Fetch remaining data in parallel without blocking the UI
         Promise.all([
@@ -367,6 +383,7 @@ export default function Admin() {
 
     const logout = async () => {
         await supabase.auth.signOut();
+        window.location.href = '/';
     };
 
     // Generic Handlers
@@ -582,8 +599,8 @@ export default function Admin() {
         return (
             <div className="min-h-screen grid place-items-center bg-slate-50 p-6">
                 <div className="bg-white p-8 rounded-2xl shadow-xl text-center border border-slate-100 max-w-md w-full">
-                    <div className="w-16 h-16 bg-indigo-100 rounded-full flex items-center justify-center mx-auto mb-6">
-                        <Settings size={32} className="text-indigo-600" />
+                    <div className="w-16 h-16 bg-[var(--theme-primary)]/10 rounded-full flex items-center justify-center mx-auto mb-6">
+                        <Settings size={32} className="text-[var(--theme-primary)]" />
                     </div>
                     <h1 className="text-2xl font-bold mb-4 text-slate-800">Desktop Only</h1>
                     <p className="text-slate-600 mb-6 leading-relaxed">
@@ -591,7 +608,7 @@ export default function Admin() {
                     </p>
                     <a
                         href="/"
-                        className="inline-flex items-center gap-2 px-6 py-3 bg-indigo-600 text-white rounded-xl font-semibold hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-200"
+                        className="inline-flex items-center gap-2 px-6 py-3 bg-[var(--theme-primary)] text-white rounded-xl font-semibold hover:opacity-90 transition-all shadow-lg shadow-[var(--theme-primary)]/20"
                     >
                         <Home size={18} /> Go to Home
                     </a>
@@ -602,13 +619,11 @@ export default function Admin() {
 
     if (!user) {
         return (
-            <div className="min-h-screen grid place-items-center bg-slate-50 p-4">
-                <div className="bg-white p-8 rounded-2xl shadow-xl text-center border border-slate-100 max-w-sm w-full">
-                    <h1 className="text-2xl font-bold mb-6 text-slate-800">Admin Login</h1>
-                    <button onClick={handleLogin} className="flex items-center justify-center gap-3 w-full text-white px-6 py-3 rounded-xl font-medium transition-all shadow-lg bg-slate-900 hover:bg-black shadow-slate-200">
-                        <LogIn size={20} /> Sign in with Google
-                    </button>
-                </div>
+            <div className="min-h-screen grid place-items-center bg-slate-50">
+                <div
+                    className="w-12 h-12 border-4 border-t-transparent rounded-full animate-spin"
+                    style={{ borderColor: '#418fe1', borderTopColor: 'transparent' }}
+                />
             </div>
         );
     }

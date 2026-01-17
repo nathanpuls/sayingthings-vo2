@@ -54,7 +54,7 @@ export default function HomeNav({ isScrolled, siteName, navLinks, mobileMenuOpen
 
                 {/* Mobile Menu Button */}
                 <button
-                    className="md:hidden text-slate-600 hover:text-indigo-600 z-10 relative"
+                    className="md:hidden text-slate-600 hover:text-[var(--theme-primary)] z-10 relative"
                     onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
                 >
                     {mobileMenuOpen ? <X /> : <Menu />}
@@ -76,7 +76,7 @@ export default function HomeNav({ isScrolled, siteName, navLinks, mobileMenuOpen
                                     key={link.name}
                                     href={link.href}
                                     onClick={() => setMobileMenuOpen(false)}
-                                    className="text-lg font-medium text-slate-600 hover:text-indigo-600"
+                                    className="text-lg font-medium text-slate-600 hover:text-[var(--theme-primary)]"
                                 >
                                     {link.name}
                                 </a>

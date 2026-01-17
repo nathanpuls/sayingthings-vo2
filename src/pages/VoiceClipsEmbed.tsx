@@ -79,7 +79,10 @@ export default function VoiceClipsEmbed() {
         return (
             <div className="min-h-screen bg-transparent p-6 flex flex-col items-center">
                 <div className="w-full max-w-[380px] mx-auto flex items-center justify-center mt-32">
-                    <Mic size={48} className="text-indigo-600 animate-pulse" />
+                    <div
+                        className="w-12 h-12 border-4 border-t-transparent rounded-full animate-spin"
+                        style={{ borderColor: settings?.theme_color || '#6366f1', borderTopColor: 'transparent' }}
+                    />
                 </div>
             </div>
         );
