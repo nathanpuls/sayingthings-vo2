@@ -8,7 +8,7 @@ import {
     Copy, Info, Contact, Share2, GripVertical, Eye, EyeOff, AlertCircle, CheckCircle, RefreshCw
 } from "lucide-react";
 import { Reorder } from "framer-motion";
-import { getUserCustomDomains, addCustomDomain, verifyDomainOwnership } from "../lib/domains";
+
 import { fonts, applyFont, loadAllFonts } from "../lib/fonts";
 import { Database } from "../lib/database.types";
 import { User as SupabaseUser } from "@supabase/supabase-js";
@@ -108,7 +108,7 @@ export default function Admin() {
     const [clients, setClients] = useState<Client[]>([]);
     const [reviews, setReviews] = useState<Review[]>([]);
     const [messages, setMessages] = useState<Message[]>([]);
-    const [customDomains, setCustomDomains] = useState<any[]>([]); // Using any for customDomains as type might differ slightly from DB
+
     const [siteContent, setSiteContent] = useState<SiteContentState>({
         username: "",
         heroTitle: "",
@@ -147,7 +147,7 @@ export default function Admin() {
     const [newStudio, setNewStudio] = useState({ name: "", url: "" });
     const [newClient, setNewClient] = useState({ url: "" });
     const [newReview, setNewReview] = useState({ text: "", author: "" });
-    const [newDomain, setNewDomain] = useState("");
+
     const [fetchingTitle, setFetchingTitle] = useState(false);
     const [deleteModal, setDeleteModal] = useState<{ isOpen: boolean; collName: string | null; id: string | null }>({ isOpen: false, collName: null, id: null });
     const [clipModal, setClipModal] = useState<{ isOpen: boolean; demo: Demo | null }>({ isOpen: false, demo: null });
@@ -282,15 +282,15 @@ export default function Admin() {
             fetchTable('studio_gear'),
             fetchTable('clients'),
             fetchTable('reviews'),
-            getUserCustomDomains(),
+
             supabase.from('messages').select('*').eq('user_id', user.id).order('created_at', { ascending: false })
-        ]).then(([demosData, videosData, studioData, clientsData, reviewsData, domainsData, msgsData]) => {
+        ]).then(([demosData, videosData, studioData, clientsData, reviewsData, msgsData]) => {
             setDemos(demosData);
             setVideos(videosData);
             setStudio(studioData);
             setClients(clientsData);
             setReviews(reviewsData);
-            setCustomDomains(domainsData);
+
             setMessages((msgsData as any).data || []);
         });
     };
@@ -323,7 +323,7 @@ export default function Admin() {
         { id: "reviews", name: "Reviews", icon: <MessageSquare size={18} /> },
         { id: "messages", name: "Messages", icon: <Mail size={18} /> },
         { id: "content", name: "Site Content", icon: <Settings size={18} /> },
-        { id: "domains", name: "Custom Domains", icon: <Globe size={18} /> },
+
     ];
 
     // Sync active tab with URL hash on mount and when hash changes
@@ -569,62 +569,7 @@ export default function Admin() {
         }
     };
 
-    const handleAddDomain = async (e: React.FormEvent) => {
-        e.preventDefault();
-        if (!newDomain) return;
-        setUploading(true);
-        try {
-            const result = await addCustomDomain(newDomain);
-            if (result.success) {
-                showToast("Domain added! Please verify ownership.", "success");
-                setNewDomain("");
-                setCustomDomains(await getUserCustomDomains());
-            } else {
-                throw result.error;
-            }
-        } catch (error: any) {
-            console.error("Add domain failed:", error);
-            showToast(error.message || "Failed to add domain", "error");
-        } finally {
-            setUploading(false);
-        }
-    };
 
-
-
-    const handleCheckVerification = async (domain: any) => {
-        setUploading(true);
-        try {
-            // 1. Check Ownership Record
-            let verified = await verifyDomainOwnership(
-                domain.domain,
-                domain.ownership_value || domain.verification_token,
-                domain.ownership_name
-            );
-
-            // 2. Backup: Check SSL Record if ownership failed
-            if (!verified && domain.ssl_name && domain.ssl_value) {
-                verified = await verifyDomainOwnership(
-                    domain.domain,
-                    domain.ssl_value,
-                    domain.ssl_name
-                );
-            }
-
-            if (verified) {
-                await (supabase.from('custom_domains' as any) as any).update({ verified: true }).eq('id', domain.id);
-                showToast("Domain verified successfully!", "success");
-                setCustomDomains(await getUserCustomDomains());
-            } else {
-                showToast("Verification failed. DNS records not found yet.", "error");
-            }
-        } catch (error) {
-            console.error("Verification error:", error);
-            showToast("Verification check failed", "error");
-        } finally {
-            setUploading(false);
-        }
-    };
 
 
 
@@ -920,211 +865,7 @@ export default function Admin() {
                         </div>
                     )}
 
-                    {/* Custom Domains Tab */}
-                    {activeTab === "domains" && (
-                        <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
-                            <div className="bg-white p-8 rounded-2xl shadow-sm border border-slate-100">
-                                <h2 className="text-xl font-bold text-slate-900 mb-2">Connect Your Domain</h2>
-                                <p className="text-slate-500 mb-6">Use your own domain (e.g., yourname.com) for your site.</p>
 
-                                <form onSubmit={handleAddDomain} className="flex gap-4 items-end mb-8">
-                                    <FormInput
-                                        label="Domain Name"
-                                        placeholder="e.g. example.com"
-                                        value={newDomain}
-                                        onChange={setNewDomain}
-                                        containerClass="flex-1"
-                                    />
-                                    <button
-                                        type="submit"
-                                        disabled={uploading || !newDomain}
-                                        className="bg-[var(--theme-primary)] text-white px-6 py-3 rounded-xl font-semibold hover:opacity-90 disabled:opacity-50 transition-all shadow-lg shadow-[var(--theme-primary)]/20"
-                                    >
-                                        Add Domain
-                                    </button>
-                                </form>
-
-                                <div className="space-y-4">
-                                    {customDomains.length === 0 ? (
-                                        <div className="text-center p-8 bg-slate-50 rounded-xl border border-dashed border-slate-200 text-slate-400">
-                                            No custom domains connected yet.
-                                        </div>
-                                    ) : (
-                                        customDomains.map(domain => (
-                                            <div key={domain.id} className="border border-slate-200 rounded-xl overflow-hidden">
-                                                <div className="p-4 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
-                                                    <div className="flex items-center gap-3">
-                                                        <Globe size={18} className="text-slate-400" />
-                                                        <span className="font-bold text-slate-700">{domain.domain}</span>
-                                                        {domain.verified ? (
-                                                            <span className="bg-green-100 text-green-700 text-xs px-2 py-1 rounded-full font-bold flex items-center gap-1">
-                                                                <CheckCircle size={12} /> Verified
-                                                            </span>
-                                                        ) : (
-                                                            <span className="bg-yellow-100 text-yellow-700 text-xs px-2 py-1 rounded-full font-bold flex items-center gap-1">
-                                                                <AlertCircle size={12} /> Unverified
-                                                            </span>
-                                                        )}
-                                                    </div>
-                                                    <div className="flex items-center gap-2">
-                                                        <button
-                                                            onClick={async () => {
-                                                                try {
-                                                                    setUploading(true);
-                                                                    const result = await addCustomDomain(domain.domain);
-                                                                    if (result.success) {
-                                                                        if (result.data?.warning) {
-                                                                            showToast(`Saved, but: ${result.data.warning}`, "error");
-                                                                        } else {
-                                                                            showToast("Domain status refreshed", "success");
-                                                                        }
-                                                                        fetchData();
-                                                                    } else {
-                                                                        const errMsg = result.error instanceof Error ? result.error.message : (typeof result.error === 'string' ? result.error : "Failed to refresh");
-                                                                        showToast(errMsg, "error");
-                                                                    }
-                                                                } catch (err: any) {
-                                                                    showToast(err.message || "An unexpected error occurred", "error");
-                                                                } finally {
-                                                                    setUploading(false);
-                                                                }
-                                                            }}
-                                                            className="text-xs font-bold text-slate-500 hover:text-[var(--theme-primary)] px-3 py-2 flex items-center gap-1"
-                                                            disabled={uploading}
-                                                        >
-                                                            <RefreshCw size={12} className={uploading ? "animate-spin" : ""} /> Refresh Status
-                                                        </button>
-                                                        {!domain.verified && (
-                                                            <button
-                                                                onClick={() => handleCheckVerification(domain)}
-                                                                className="text-xs font-bold text-[var(--theme-primary)] hover:underline px-3 py-2"
-                                                            >
-                                                                Check Verification
-                                                            </button>
-                                                        )}
-                                                        <button
-                                                            onClick={() => deleteItem('custom_domains', domain.id)}
-                                                            className="text-slate-400 hover:text-red-500 p-2 hover:bg-red-50 rounded-lg transition-colors"
-                                                        >
-                                                            <Trash2 size={16} />
-                                                        </button>
-                                                    </div>
-                                                </div>
-
-                                                {!domain.verified && (
-                                                    <div className="p-4 bg-white space-y-4">
-                                                        <div className="text-sm text-slate-600">
-                                                            {(domain.ownership_value || domain.verification_token) ? (
-                                                                <>To verify ownership, add these records to your DNS provider (e.g. <a href="https://dash.cloudflare.com" target="_blank" rel="noopener noreferrer" className="text-[var(--theme-primary)] hover:underline font-medium">Cloudflare</a>, GoDaddy).</>
-                                                            ) : (
-                                                                <span className="text-amber-600 flex items-center gap-2">
-                                                                    <AlertCircle size={16} />
-                                                                    <span>
-                                                                        <b>Manual Setup Required:</b> We couldn't generate automatic verification tokens.
-                                                                        Please add the CNAME record below. If it doesn't verify within 24 hours (or if your site doesn't load), please contact support.
-                                                                    </span>
-                                                                </span>
-                                                            )}
-                                                        </div>
-
-                                                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                                                            {/* CNAME RECORD */}
-                                                            <div className="p-4 bg-slate-50 rounded-xl border border-slate-100 flex flex-col justify-between">
-                                                                <div>
-                                                                    <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2 flex justify-between items-center">
-                                                                        <span>CNAME Record</span>
-                                                                        <span className="bg-slate-200 text-slate-600 px-2 py-0.5 rounded-full font-medium normal-case">DNS Only</span>
-                                                                    </div>
-                                                                    <div className="space-y-3">
-                                                                        <div className="space-y-1">
-                                                                            <span className="text-[10px] text-slate-400 uppercase font-bold">Host</span>
-                                                                            <div className="flex items-center justify-between bg-white px-3 py-2 rounded-lg border border-slate-100 group">
-                                                                                <span className="font-mono text-xs text-slate-800">@</span>
-                                                                                <button onClick={() => { navigator.clipboard.writeText("@"); showToast("Copied Host", "success"); }} className="text-slate-300 hover:text-[var(--theme-primary)] transition-colors opacity-0 group-hover:opacity-100"><Copy size={14} /></button>
-                                                                            </div>
-                                                                        </div>
-                                                                        <div className="space-y-1">
-                                                                            <span className="text-[10px] text-slate-400 uppercase font-bold">Target</span>
-                                                                            <div className="flex items-center justify-between bg-white px-3 py-2 rounded-lg border border-slate-100 group">
-                                                                                <span className="font-mono text-xs text-slate-800">built.at</span>
-                                                                                <button onClick={() => { navigator.clipboard.writeText("built.at"); showToast("Copied Target", "success"); }} className="text-slate-300 hover:text-[var(--theme-primary)] transition-colors opacity-0 group-hover:opacity-100"><Copy size={14} /></button>
-                                                                            </div>
-                                                                        </div>
-                                                                    </div>
-                                                                </div>
-                                                            </div>
-
-                                                            {/* OWNERSHIP TXT RECORD */}
-                                                            {(domain.ownership_value || domain.verification_token) && (
-                                                                <div className="p-4 bg-slate-50 rounded-xl border border-slate-100 flex flex-col justify-between">
-                                                                    <div>
-                                                                        <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">Ownership TXT</div>
-                                                                        <div className="space-y-3">
-                                                                            <div className="space-y-1">
-                                                                                <span className="text-[10px] text-slate-400 uppercase font-bold">Name</span>
-                                                                                <div className="flex items-center justify-between bg-white px-3 py-2 rounded-lg border border-slate-100 group">
-                                                                                    <span className="font-mono text-[11px] text-slate-800 truncate pr-2">{domain.ownership_name || `_cf-custom-hostname`}</span>
-                                                                                    <button onClick={() => { navigator.clipboard.writeText(domain.ownership_name || `_cf-custom-hostname`); showToast("Copied Name", "success"); }} className="text-slate-300 hover:text-[var(--theme-primary)] transition-colors opacity-0 group-hover:opacity-100 shrink-0"><Copy size={14} /></button>
-                                                                                </div>
-                                                                            </div>
-                                                                            <div className="space-y-1">
-                                                                                <span className="text-[10px] text-slate-400 uppercase font-bold">Value</span>
-                                                                                <div className="flex items-start justify-between bg-white px-3 py-2 rounded-lg border border-slate-100 group min-h-[60px]">
-                                                                                    <span className="font-mono text-[10px] text-slate-600 break-all leading-relaxed">
-                                                                                        {domain.ownership_value || domain.verification_token}
-                                                                                    </span>
-                                                                                    <button onClick={() => { navigator.clipboard.writeText(domain.ownership_value || domain.verification_token); showToast("Copied Value", "success"); }} className="text-slate-300 hover:text-[var(--theme-primary)] transition-colors opacity-0 group-hover:opacity-100 shrink-0 mt-0.5"><Copy size={14} /></button>
-                                                                                </div>
-                                                                            </div>
-                                                                        </div>
-                                                                    </div>
-                                                                </div>
-                                                            )}
-
-                                                            {/* SSL RECORD (TXT or CNAME) */}
-                                                            {domain.ssl_name && (domain.ownership_value || domain.verification_token) && (
-                                                                <div className="p-4 bg-slate-50 rounded-xl border border-slate-100 flex flex-col justify-between">
-                                                                    <div>
-                                                                        <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2 flex justify-between items-center">
-                                                                            <span>SSL Validation {domain.ssl_value?.includes('.cloudflare.com') ? 'CNAME' : 'TXT'}</span>
-                                                                            {domain.ssl_value?.includes('.cloudflare.com') && (
-                                                                                <span className="bg-slate-200 text-slate-600 px-2 py-0.5 rounded-full font-medium normal-case">CNAME</span>
-                                                                            )}
-                                                                        </div>
-                                                                        <div className="space-y-3">
-                                                                            <div className="space-y-1">
-                                                                                <span className="text-[10px] text-slate-400 uppercase font-bold">Name</span>
-                                                                                <div className="flex items-center justify-between bg-white px-3 py-2 rounded-lg border border-slate-100 group">
-                                                                                    <span className="font-mono text-[11px] text-slate-800 truncate pr-2">{domain.ssl_name}</span>
-                                                                                    <button onClick={() => { navigator.clipboard.writeText(domain.ssl_name); showToast("Copied Name", "success"); }} className="text-slate-300 hover:text-[var(--theme-primary)] transition-colors opacity-0 group-hover:opacity-100 shrink-0"><Copy size={14} /></button>
-                                                                                </div>
-                                                                            </div>
-                                                                            <div className="space-y-1">
-                                                                                <span className="text-[10px] text-slate-400 uppercase font-bold">Value</span>
-                                                                                <div className="flex items-start justify-between bg-white px-3 py-2 rounded-lg border border-slate-100 group min-h-[60px]">
-                                                                                    <span className="font-mono text-[10px] text-slate-600 break-all leading-relaxed">
-                                                                                        {domain.ssl_value}
-                                                                                    </span>
-                                                                                    <button onClick={() => { navigator.clipboard.writeText(domain.ssl_value); showToast("Copied Value", "success"); }} className="text-slate-300 hover:text-[var(--theme-primary)] transition-colors opacity-0 group-hover:opacity-100 shrink-0 mt-0.5"><Copy size={14} /></button>
-                                                                                </div>
-                                                                            </div>
-                                                                        </div>
-                                                                    </div>
-                                                                </div>
-                                                            )}
-                                                        </div>
-                                                        <p className="text-xs text-slate-400 italic">
-                                                            Note: DNS changes can take up to 48 hours to propagate, though it's usually much faster.
-                                                        </p>
-                                                    </div>
-                                                )}
-                                            </div>
-                                        ))
-                                    )}
-                                </div>
-                            </div>
-                        </div>
-                    )}
 
                     {/* Site Content Tab */}
                     {activeTab === "content" && (
