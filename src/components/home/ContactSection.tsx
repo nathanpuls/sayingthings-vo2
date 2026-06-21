@@ -31,7 +31,12 @@ export default function ContactSection({ siteContent, uid, basePadding = "py-6 m
 
     const handleContactSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!uid) return;
+        if (!uid) {
+            console.error("Contact form is missing the site owner ID.");
+            setSubmitStatus('error');
+            setTimeout(() => setSubmitStatus(null), 5000);
+            return;
+        }
 
         // Bot detection
         if (contactForm.botField) {

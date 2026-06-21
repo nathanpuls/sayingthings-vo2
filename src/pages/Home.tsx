@@ -467,7 +467,7 @@ export default function Home() {
                 <ContactSection
                   key="contact"
                   siteContent={siteContent}
-                  uid={uid}
+                  uid={siteContent.ownerId}
                   basePadding={basePadding}
                 />
               );
