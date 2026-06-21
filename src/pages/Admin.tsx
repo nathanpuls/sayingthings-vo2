@@ -2,10 +2,10 @@ import { useState, useEffect, useRef } from "react";
 import { supabase } from "../lib/supabase";
 import { Link } from "react-router-dom";
 import {
-    Trash2, Save, LogOut, LogIn,
+    Trash2, Save, LogOut,
     Home, Music, Video, Mic, Users, Scissors,
-    MessageSquare, Settings, Mail, Globe,
-    Copy, Info, Contact, Share2, GripVertical, Eye, EyeOff, AlertCircle, CheckCircle, RefreshCw
+    MessageSquare, Settings, Mail,
+    Info, Contact, Share2, GripVertical, Eye, EyeOff
 } from "lucide-react";
 import { Reorder } from "framer-motion";
 
@@ -628,7 +628,7 @@ export default function Admin() {
         );
     }
 
-    if (user.email !== authorizedEmail && authorizedEmail !== "") {
+    if (user.email !== authorizedEmail) {
         return (
             <div className="min-h-screen grid place-items-center bg-slate-50 p-4 font-medium">
                 <div className="bg-white p-8 rounded-2xl shadow-xl text-center border border-red-100 max-w-sm w-full">

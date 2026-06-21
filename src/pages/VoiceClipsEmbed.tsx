@@ -4,7 +4,6 @@ import { supabase } from '../lib/supabase';
 import { resolveUser } from '../lib/users';
 import { normalizeClips } from '../lib/audio';
 import VoiceClipsPlayer from '../components/VoiceClipsPlayer';
-import { Mic } from 'lucide-react';
 
 
 
