@@ -183,32 +183,6 @@ export interface Database {
                     created_at?: string
                 }
             }
-            messages: {
-                Row: {
-                    id: string
-                    user_id: string
-                    name: string
-                    email: string
-                    message: string
-                    created_at: string
-                }
-                Insert: {
-                    id?: string
-                    user_id: string
-                    name: string
-                    email: string
-                    message: string
-                    created_at?: string
-                }
-                Update: {
-                    id?: string
-                    user_id?: string
-                    name?: string
-                    email?: string
-                    message?: string
-                    created_at?: string
-                }
-            }
             site_settings: {
                 Row: {
                     user_id: string

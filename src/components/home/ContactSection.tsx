@@ -1,17 +1,15 @@
 import { useState, useEffect } from "react";
 import { Mail, Phone, MessageSquare, Check, X } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import { supabase } from "../../lib/supabase";
 import FadeInSection from "../FadeInSection";
 import SectionHeader from "./SectionHeader";
 
 interface ContactSectionProps {
     siteContent: any;
-    uid: string | undefined;
     basePadding?: string;
 }
 
-export default function ContactSection({ siteContent, uid, basePadding = "py-6 md:py-10" }: ContactSectionProps) {
+export default function ContactSection({ siteContent, basePadding = "py-6 md:py-10" }: ContactSectionProps) {
     const [contactForm, setContactForm] = useState({ name: "", email: "", message: "", botField: "" });
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [submitStatus, setSubmitStatus] = useState<'success' | 'error' | null>(null);
@@ -31,12 +29,6 @@ export default function ContactSection({ siteContent, uid, basePadding = "py-6 m
 
     const handleContactSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!uid) {
-            console.error("Contact form is missing the site owner ID.");
-            setSubmitStatus('error');
-            setTimeout(() => setSubmitStatus(null), 5000);
-            return;
-        }
 
         // Bot detection
         if (contactForm.botField) {
@@ -54,20 +46,6 @@ export default function ContactSection({ siteContent, uid, basePadding = "py-6 m
         setIsSubmitting(true);
         setSubmitStatus(null);
         try {
-            // 1. Save to Supabase (Database backup)
-            try {
-                const { error } = await (supabase.from('messages') as any).insert([{
-                    user_id: uid,
-                    name: contactForm.name,
-                    email: contactForm.email,
-                    message: contactForm.message
-                }]);
-                if (error) console.warn("Database log failed (table might be missing), but continuing with email...");
-            } catch (dbErr) {
-                console.warn("Database log failed:", dbErr);
-            }
-
-            // 2. Forward to Email (Web3Forms)
             if (siteContent.web3FormsKey) {
                 const response = await fetch("https://api.web3forms.com/submit", {
                     method: "POST",

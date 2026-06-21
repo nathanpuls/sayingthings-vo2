@@ -2,9 +2,9 @@ import { useState, useEffect, useRef } from "react";
 import { supabase } from "../lib/supabase";
 import { Link } from "react-router-dom";
 import {
-    Trash2, Save, LogOut,
+    Save, LogOut,
     Home, Music, Video, Mic, Users, Scissors,
-    MessageSquare, Settings, Mail,
+    MessageSquare, Settings,
     Info, Contact, Share2, GripVertical, Eye, EyeOff
 } from "lucide-react";
 import { Reorder } from "framer-motion";
@@ -28,7 +28,6 @@ type VideoItem = Database['public']['Tables']['videos']['Row'];
 type StudioGear = Database['public']['Tables']['studio_gear']['Row'];
 type Client = Database['public']['Tables']['clients']['Row'];
 type Review = Database['public']['Tables']['reviews']['Row'];
-type Message = Database['public']['Tables']['messages']['Row'];
 // type CustomDomain = Database['public']['Tables']['custom_domains']['Row'];
 
 // Note: site_settings is an object, not array
@@ -107,7 +106,6 @@ export default function Admin() {
     const [studio, setStudio] = useState<StudioGear[]>([]);
     const [clients, setClients] = useState<Client[]>([]);
     const [reviews, setReviews] = useState<Review[]>([]);
-    const [messages, setMessages] = useState<Message[]>([]);
 
     const [siteContent, setSiteContent] = useState<SiteContentState>({
         username: "",
@@ -297,17 +295,13 @@ export default function Admin() {
             fetchTable('videos'),
             fetchTable('studio_gear'),
             fetchTable('clients'),
-            fetchTable('reviews'),
-
-            supabase.from('messages').select('*').eq('user_id', user.id).order('created_at', { ascending: false })
-        ]).then(([demosData, videosData, studioData, clientsData, reviewsData, msgsData]) => {
+            fetchTable('reviews')
+        ]).then(([demosData, videosData, studioData, clientsData, reviewsData]) => {
             setDemos(demosData);
             setVideos(videosData);
             setStudio(studioData);
             setClients(clientsData);
             setReviews(reviewsData);
-
-            setMessages((msgsData as any).data || []);
         });
     };
 
@@ -337,7 +331,6 @@ export default function Admin() {
         { id: "studio", name: "Studio", icon: <Mic size={18} /> },
         { id: "clients", name: "Clients", icon: <Users size={18} /> },
         { id: "reviews", name: "Reviews", icon: <MessageSquare size={18} /> },
-        { id: "messages", name: "Messages", icon: <Mail size={18} /> },
         { id: "content", name: "Site Content", icon: <Settings size={18} /> },
 
     ];
@@ -837,50 +830,6 @@ export default function Admin() {
                             <ItemList items={reviews} collName="reviews" onReorder={(newItems) => handleReorder("reviews", newItems)} onDelete={deleteItem} editingId={editingId} setEditingId={setEditingId} editForm={editForm} setEditForm={setEditForm} onSave={updateItem} onCancel={() => setEditingId(null)} fields={[{ key: 'text', label: 'Review' }, { key: 'author', label: 'Author' }]} />
                         </div>
                     )}
-
-                    {/* Messages Tab */}
-                    {activeTab === "messages" && (
-                        <div className="space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
-                            <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden divide-y divide-slate-50">
-                                {messages.length === 0 ? (
-                                    <div className="p-16 text-center text-slate-400 font-medium">
-                                        No messages yet.
-                                    </div>
-                                ) : (
-                                    messages.map((msg) => (
-                                        <div key={msg.id} className="p-6 hover:bg-slate-50/50 transition-colors">
-                                            <div className="flex justify-between items-start mb-4">
-                                                <div>
-                                                    <h3 className="font-bold text-slate-800 text-lg">{msg.name}</h3>
-                                                    <a href={`mailto:${msg.email}`} className="text-sm text-[var(--theme-primary)] hover:underline font-medium">{msg.email}</a>
-                                                </div>
-                                                <div className="flex items-center gap-4">
-                                                    <span className="text-xs text-slate-400 font-medium">{new Date(msg.created_at).toLocaleDateString()}</span>
-                                                    <button
-                                                        onClick={async () => {
-                                                            if (confirm("Delete this message?")) {
-                                                                const { error } = await supabase.from('messages').delete().eq('id', msg.id);
-                                                                if (error) showToast("Error deleting: " + error.message, "error");
-                                                                else fetchData();
-                                                            }
-                                                        }}
-                                                        className="p-2 text-slate-300 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all"
-                                                    >
-                                                        <Trash2 size={18} />
-                                                    </button>
-                                                </div>
-                                            </div>
-                                            <div className="bg-slate-50 p-4 rounded-xl border border-slate-100 text-slate-600 text-sm leading-relaxed whitespace-pre-wrap">
-                                                {msg.message}
-                                            </div>
-                                        </div>
-                                    ))
-                                )}
-                            </div>
-                        </div>
-                    )}
-
-
 
                     {/* Site Content Tab */}
                     {activeTab === "content" && (
